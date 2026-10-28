@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olejový Asistent M2 - Priama Tlač</title>
+    <!-- Knižnice pre QR skenovanie a komunikáciu s Niimbot -->
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
+        h2 { text-align: center; color: #28a745; }
+        .box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-orange { background: #fd7e14; color: white; }
+        textarea, input { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+        #reader { width: 100%; max-width: 400px; margin: auto; }
+        .status { font-weight: bold; text-align: center; margin: 10px 0; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h2>Olejový Asistent (NiimBlue Direct)</h2>
+
+    <!-- KONEKTIVITA -->
+    <div class="box">
+        <h3>Tlačiareň Niimbot M2</h3>
+        <button class="btn-orange" onclick="pripojitTlaciaren()">🔌 Pripojiť tlačiareň cez Bluetooth</button>
+        <div class="status" id="status-tlaciarne">Stav: Odpojená</div>
+    </div>
+
+    <!-- 1. KROK: SKENOVANIE HOCIAKÝM MOBILOM -->
+    <div class="box">
+        <h3>1. Krok: História z QR kódu</h3>
+        <button class="btn-blue" onclick="spustitKameru()">📷 Naskenovať starý štítok</button>
+        <div id="reader" style="display:none;"></div>
+        <textarea id="historia-input" rows="4" placeholder="Sem sa načíta história výmen..."></textarea>
+    </div>
+
+    <!-- 2. KROK: ZADANIE ÚDAJOV -->
+    <div class="box">
+        <h3>2. Krok: Aktuálna výmena</h3>
+        <label>Aktuálne Kilometre:</label>
+        <input type="text" id="nove-km" placeholder="napr. 155 200 km">
+        
+        <label>Olej / Poznámka:</label>
+        <input type="text" id="nova-poznamka" placeholder="napr. 5W-30 Shell">
+    </div>
+
+    <!-- 3. KROK: PRIAMA TLAČ -->
+    <button class="btn-green" onclick="tlacitStitok()">🖨️ Vytlačiť nový štítok priamo</button>
+
+    <script>
+        let html5QrcodeScanner;
+        let niimbotClient = null;
+
+        // Funkcia na pripojenie k tlačiarni cez Web Bluetooth (NiimBlue technológia)
+        async function pripojitTlaciaren() {
+            try {
+                document.getElementById('status-tlaciarne').innerText = "Pripájanie...";
+                
+                // Inicializácia klienta z knižnice niimbluelib
+                niimbotClient = new niimbluelib.NiimbotBluetoothClient();
+                await niimbotClient.connect();
+                
+                document.getElementById('status-tlaciarne').innerText = "Stav: Pripojená (Niimbot M2 Ready) ✅";
+                document.getElementById('status-tlaciarne').style.color = "#28a745";
+            } catch (error) {
+                console.error(error);
+                document.getElementById('status-tlaciarne').innerText = "Chyba pripojenia: " + error.message;
+                document.getElementById('status-tlaciarne').style.color = "#dc3545";
+            }
+        }
+
+        // Skener QR kódu pomocou kamery mobilu
+        function spustitKameru() {
+            document.getElementById('reader').style.display = 'block';
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (qrText) => {
+                    document.getElementById('historia-input').value = qrText;
+                    html5QrcodeScanner.stop();
+                    document.getElementById('reader').style.display = 'none';
+                },
+                (err) => {}
+            ).catch(err => alert("Chyba kamery: " + err));
+        }
+
+        // Samotná priama tlač bez použitia oficiálnej aplikácie
+        async function tlacitStitok() {
+            if (!niimbotClient) {
+                alert("Najprv pripoj tlačiareň cez Bluetooth!");
+                return;
+            }
+
+            let staryText = document.getElementById('historia-input').value.trim();
+            let km = document.getElementById('nove-km').value.trim();
+            let poznamka = document.getElementById('nova-poznamka').value.trim();
+            
+            if(!km) { alert("Zadaj aktuálne kilometre!"); return; }
+
+            let dnes = new Date();
+            let formatDatum = dnes.getDate() + "." + (dnes.getMonth()+1) + "." + dnes.getFullYear();
+            let pocetVymen = staryText ? (staryText.match(/VÝMENA/g) || []).length : 0;
+            let cisloVymeny = pocetVymen + 1;
+
+            // Formát textu na štítok a do QR
+            let novyRiadok = cisloVymeny + ". VÝMENA: " + formatDatum + " | " + km;
+            if(poznamka) novyRiadok += " (" + poznamka + ")";
+            let kompletnyQRText = staryText ? staryText + "\n" + novyRiadok : novyRiadok;
+
+            try {
+                // Spustenie tlačovej úlohy (príprava papiera - napr. štítok 50x30mm)
+                await niimbotClient.startPrintTask({
+                    width: 400,  // v pixeloch (cca 50mm pri 203/300 DPI)
+                    height: 240, // v pixeloch (cca 30mm)
+                    quantity: 1
+                });
+
+                // Vygenerovanie čistého plátna pre tlač
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 240;
+                const ctx = canvas.getContext('2d');
+
+                // Vykreslenie textu aktuálnej výmeny na štítok
+                ctx.fillStyle = "black";
+                ctx.font = "bold 20px Arial";
+                ctx.fillText("AKTUÁLNA VÝMENA OLEJA", 10, 30);
+                
+                ctx.font = "18px Arial";
+                ctx.fillText("Dátum: " + formatDatum, 10, 70);
+                ctx.fillText("KM: " + km, 10, 100);
+                if(poznamka) ctx.fillText(poznamka, 10, 130);
+
+                // Vykreslenie inštrukcie k QR kódu
+                ctx.font = "italic 12px Arial";
+                ctx.fillText("Naskenuj pre históriu ->", 10, 200);
+
+                // Tu vygenerujeme QR kód priamo pomocou NiimBlue protokolu
+                // Do jedného rohu štítku umiestnime QR kód, ktorý nesie komplet celú históriu
+                await niimbotClient.drawQrCode({
+                    x: 240,
+                    y: 50,
+                    size: 140,
+                    text: kompletnyQRText
+                });
+
+                // Odoslanie obrazových dát z plátna do tlačiarne a samotný štart tlače
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                await niimbotClient.drawImage(imageData);
+                await niimbotClient.endPrintTask();
+
+                alert("Štítok sa úspešne tlačí!");
+            } catch (error) {
+                alert("Chyba pri tlači: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
