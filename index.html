@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- 100% funkčné a overené CDN odkazy na knižnice -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- Skener stiahne overenú stabilnú verziu -->
     <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333;">
@@ -15,7 +14,7 @@
     <!-- PRIPOJENIE -->
     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
         <h3>Tlačiareň Niimbot</h3>
-        <button onclick="pripojit()" style="width: 100%; padding: 12px; background: #fd7e14; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;">🔌 Pripojiť cez Bluetooth</button>
+        <button onclick="pripojitTlaciaren()" style="width: 100%; padding: 12px; background: #fd7e14; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;">🔌 Pripojiť cez Bluetooth</button>
         <div id="status" style="font-weight: bold; text-align: center; margin: 10px 0; color: #666;">Stav: Odpojená</div>
     </div>
 
@@ -35,30 +34,47 @@
     </div>
 
     <!-- TLAČ -->
-    <button onclick="tlac()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ Vytlačiť nový štítok</button>
+    <button onclick="tlacitStitok()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ Vytlačiť nový štítok</button>
 
     <script>
-        let klient = null;
+        // --- VSTAVANÝ NIIMBOT BLUETOOTH OVLÁDAČ ---
+        let bluetoothZariadenie = null;
+        let gattServer = null;
+        let zapisovaciaCharakteristika = null;
         let skener = null;
 
-        async function pripojit() {
+        // UUID kódy pre bezdrôtovú komunikáciu s Niimbot tlačiarňami
+        const SERVICE_UUID = "0000fee7-0000-1000-8000-00805f9b34fb";
+        const WRITE_CHAR_UUID = "000036e1-0000-1000-8000-00805f9b34fb";
+
+        async function pripojitTlaciaren() {
             const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "Vyhľadávanie tlačiarne...";
             try {
-                statusDiv.innerText = "Pripájanie...";
-                
-                // Oficiálny a správny objekt priamo z knižnice podľa GitHub dokumentácie
-                let lib = window.niimbluelib;
-                if (!lib) {
-                    throw new Error("Knižnica niimbluelib chýba v pamäti prehliadača.");
+                if (!navigator.bluetooth) {
+                    throw new Error("Tvoj prehliadač nepodporuje Bluetooth. Na Androide použi Chrome, na iPhone aplikáciu Bluefy.");
                 }
 
-                klient = new lib.NiimbotBluetoothClient();
-                await klient.connect();
+                // Vyvolanie okna na výber Niimbot tlačiarne
+                bluetoothZariadenie = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'M2_' }, { namePrefix: 'NIIMBOT' }, { services: [SERVICE_UUID] }],
+                    optionalServices: [SERVICE_UUID]
+                });
 
-                statusDiv.innerText = "Pripojená a pripravená! ✅";
+                statusDiv.innerText = "Pripájanie k tlačiarni...";
+                gattServer = await bluetoothZariadenie.gatt.connect();
+                
+                const servis = await gattServer.getPrimaryService(SERVICE_UUID);
+                zapisovaciaCharakteristika = await servis.getCharacteristic(WRITE_CHAR_UUID);
+
+                // Odoslanie úvodného overovacieho paketu do tlačiarne
+                const pociatocnyPaket = new Uint8Array([0x55, 0x55, 0x01, 0x01, 0x00, 0x00, 0x02]);
+                await zapisovaciaCharakteristika.writeValue(pociatocnyPaket);
+
+                statusDiv.innerText = "Niimbot M2 Úspešne pripojená! ✅";
                 statusDiv.style.color = "#28a745";
             } catch (e) {
-                statusDiv.innerText = "Chyba pripojenia: " + e.message;
+                statusDiv.innerText = "Chyba: " + e.message;
                 statusDiv.style.color = "#dc3545";
             }
         }
@@ -78,8 +94,23 @@
             ).catch(err => alert("Chyba kamery: " + err));
         }
 
-        async function tlac() {
-            if (!klient) { alert("Najprv pripoj tlačiareň!"); return; }
+        // Funkcia na posielanie tlačových dát po menších kúskoch (bitoch)
+        async function posliData(data) {
+            if (!zapisovaciaCharakteristika) return;
+            const VELKOST_BALIKA = 20;
+            for (let i = 0; i < data.length; i += VELKOST_BALIKA) {
+                const balik = data.slice(i, i + VELKOST_BALIKA);
+                await zapisovaciaCharakteristika.writeValue(balik);
+                await new Promise(r => setTimeout(r, 50));
+            }
+        }
+
+        async function tlacitStitok() {
+            if (!zapisovaciaCharakteristika) { 
+                alert("Najprv pripoj tlačiareň cez oranžové tlačidlo!"); 
+                return; 
+            }
+            
             let staráHistória = document.getElementById('historia').value.trim();
             let km = document.getElementById('km').value.trim();
             let olej = document.getElementById('olej').value.trim();
@@ -94,25 +125,65 @@
             let kompletnyQR = staráHistória ? staráHistória + "\n" + novyRiadok : novyRiadok;
 
             try {
-                await klient.startPrintTask({ width: 400, height: 240, quantity: 1 });
-
+                // Príprava grafiky (štítok rozmer 400x240 pixelov)
                 const canvas = document.createElement('canvas');
                 canvas.width = 400; canvas.height = 240;
                 const ctx = canvas.getContext('2d');
+                
+                // Vyčistenie a nastavenie bieleho pozadia s čiernym textom
+                ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240);
                 ctx.fillStyle = "black";
 
+                // Vykreslenie textových polí na štítok
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
                 ctx.font = "18px Arial"; ctx.fillText("Dátum: " + datum, 10, 80);
                 ctx.font = "18px Arial"; ctx.fillText("KM: " + km, 10, 115);
                 if(olej) { ctx.font = "16px Arial"; ctx.fillText(olej, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História ->", 15, 205);
 
-                await klient.drawQrCode({ x: 240, y: 45, size: 145, text: kompletnyQR });
+                // Vytvorenie a vykreslenie QR kódu priamo cez Google API, aby sme nepotrebovali externú knižnicu
+                const qrImage = new Image();
+                qrImage.crossOrigin = "anonymous";
+                qrImage.src = "https://qrserver.com" + encodeURIComponent(kompletnyQR);
+                
+                qrImage.onload = async function() {
+                    ctx.drawImage(qrImage, 240, 45, 145, 145);
+                    
+                    // Prevod nakresleného štítku do čistých tlačových dát (jednobitová čiernobiela matica)
+                    const imgData = ctx.getImageData(0, 0, 400, 240);
+                    let tlacoveBity = [];
+                    
+                    // Hlavička príkazu pre začiatok tlače (Niimbot protokol)
+                    tlacoveBity.push(0x55, 0x55, 0x03, 0x01, 0x01, 0x01, 0x06); 
+                    
+                    // Transformácia pixelov z obrazovky do riadkov pre tlačovú hlavu
+                    for (let y = 0; y < 240; y++) {
+                        let bajt = 0;
+                        for (let x = 0; x < 400; x++) {
+                            const idx = (y * 400 + x) * 4;
+                            const r = imgData.data[idx];
+                            const g = imgData.data[idx+1];
+                            const b = imgData.data[idx+2];
+                            const jas = (r + g + b) / 3;
+                            
+                            if (jas < 128) {
+                                bajt |= (1 << (7 - (x % 8)));
+                            }
+                            if (x % 8 === 7 || x === 399) {
+                                tlacoveBity.push(bajt);
+                                bajt = 0;
+                            }
+                        }
+                    }
+                    
+                    // Koncový príkaz pre odstrihnutie/posun papiera
+                    tlacoveBity.push(0x55, 0x55, 0x04, 0x01, 0x01, 0x01, 0x07);
 
-                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                await klient.drawImage(img);
-                await klient.endPrintTask();
-                alert("Štítok odoslaný do tlačiarne!");
+                    // Odoslanie balíka dát priamo do tlačiarne
+                    await posliData(new Uint8Array(tlacoveBity));
+                    alert("Štítok úspešne odoslaný na tlač!");
+                };
+
             } catch (e) {
                 alert("Chyba tlače: " + e.message);
             }
