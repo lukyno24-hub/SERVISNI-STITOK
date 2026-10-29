@@ -4,40 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olej Asistent M2</title>
-    <!-- Stabilný a odľahčený dekódovací čip pre natívne video -->
+    <!-- Stabilné jadro dekóderu QR kódov -->
     <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 5.4.1 (OPRAVENÝ DETEKTOR)
+        Verzia: 6.1.0 (ZAMERANÉ NA SKENER)
     </div>
 
     <!-- 1. BLUETOOTH -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <button onclick="pripojit()" style="width:100%;padding:14px;background:#fd7e14;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;">🔌 Pripojiť Niimbot M2</button>
+        <button onclick="pripojit()" style="width:100%;padding:14px;background:#fd7e14;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;">🔌 Pripojiť Niimbot M2</button>
         <div id="status" style="font-weight:bold;text-align:center;margin-top:10px;color:#666;">Stav: Odpojená</div>
     </div>
 
     <!-- 2. SKENER -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;margin-bottom:10px;">📷 Naskenovať starý štítok</button>
+        <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Naskenovať starý štítok</button>
         <div id="kamera-status" style="color:#007bff;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;"></div>
-        <!-- Overené funkčné plátno z verzie 4.0.6 -->
+        
+        <!-- Skryté plátno a aktívne video pre zameranie kódu -->
         <video id="video" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
         <canvas id="qr-canvas" style="display:none;"></canvas>
-        <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;" placeholder="Stará história výmen..."></textarea>
+        
+        <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;" placeholder="Sem sa musí po naskenovaní zapísať text z QR kódu..."></textarea>
     </div>
 
-    <!-- 3. FORMULÁR -->
+    <!-- 3. DOČASNÝ FORMULÁR -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <input type="text" id="km" style="width:100%;padding:11px;margin-bottom:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Aktuálne KM (napr. 155 200)">
-        <input type="text" id="olej" style="width:100%;padding:11px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Olej / Poznámka (napr. 5W-30)">
+        <input type="text" id="km" style="width:100%;padding:11px;margin-bottom:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Kilometre">
+        <input type="text" id="olej" style="width:100%;padding:11px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Poznámka">
     </div>
 
-    <!-- 4. TLAČ -->
-    <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;">🖨️ Vytlačiť nový štítok</button>
+    <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;cursor:pointer;">🖨️ Vytlačiť štítok</button>
     <script>
         let tx = null, rx = null, streamObj = null, scanInterval = null;
         const uuids = [
@@ -49,10 +50,8 @@
 
         function mkPacket(cmd, data = []) {
             let p = [0x55, 0x55, cmd, data.length, ...data];
-            let cs = cmd ^ data.length;
-            for(let d of data) cs ^= d;
-            p.push(cs, 0xaa, 0xaa);
-            return new Uint8Array(p);
+            let cs = cmd ^ data.length; for(let d of data) cs ^= d;
+            p.push(cs, 0xaa, 0xaa); return new Uint8Array(p);
         }
 
         async function pripojit() {
@@ -62,12 +61,9 @@
                 const dev = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { namePrefix: 'JC' }], optionalServices: uuids
                 });
-                st.innerText = "Pripájanie k GATT...";
-                const srv = await dev.gatt.connect();
-                let svc = null;
+                st.innerText = "Pripájanie ku GATT..."; const srv = await dev.gatt.connect(); let svc = null;
                 for (let u of uuids) { try { svc = await srv.getPrimaryService(u); if (svc) break; } catch(e){} }
                 if (!svc) throw new Error("Služba nenájdená.");
-                
                 const chs = await svc.getCharacteristics();
                 for (let c of chs) {
                     if (c.properties.write || c.properties.writeWithoutResponse) tx = c;
@@ -75,61 +71,72 @@
                 }
                 if (!tx) throw new Error("Zápisový kanál nenájdený.");
                 if (rx) await rx.startNotifications().catch(()=>{});
-
-                await tx.writeValue(mkPacket(0x01, [0x01]));
-                await new Promise(r => setTimeout(r, 80));
+                await tx.writeValue(mkPacket(0x01, [0x01])); await new Promise(r => setTimeout(r, 80));
                 await tx.writeValue(mkPacket(0x40, [0x01]));
-
                 st.innerText = "Tlačiareň prepojená! ✅"; st.style.color = "#28a745";
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
+        // PREPRACOVANÉ SKENOVANIE: Vysoké rozlíšenie pre bleskové čítanie QR kódu
         async function skenovat() {
-            const statusDiv = document.getElementById('kamera-status');
+            const statusDiv = document.getElementById('kamera-status'); 
             const video = document.getElementById('video');
-            const canvas = document.getElementById('qr-canvas');
+            const canvas = document.getElementById('qr-canvas'); 
             const ctx = canvas.getContext('2d');
-            statusDiv.innerText = "Spúšťam fotoaparát...";
+            
+            statusDiv.innerText = "Spúšťam fotoaparát..."; 
             statusDiv.style.color = "#fd7e14";
             
             try {
                 if (streamObj) { streamObj.getTracks().forEach(t => t.stop()); clearInterval(scanInterval); }
-
-                streamObj = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
+                
+                // Vypýtame si od mobilu video v maximálnej možnej kvalite a rozlíšení (HD/FullHD)
+                streamObj = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
                 });
-
-                video.srcObject = streamObj;
+                
+                video.srcObject = streamObj; 
                 video.style.display = "block";
-                statusDiv.innerText = "📷 Zamier na QR kód štítku...";
+                statusDiv.innerText = "📷 Skenujem... Zamier na akýkoľvek QR kód zblízka."; 
                 statusDiv.style.color = "#007bff";
-
+                
+                // Rýchla slučka na analýzu ostrých snímok každých 200 milisekúnd
                 scanInterval = setInterval(() => {
                     if (video.readyState === video.HAVE_CURRENT_DATA) {
-                        canvas.width = 480;
-                        canvas.height = Math.floor(video.videoHeight * (480 / video.videoWidth));
+                        // Plátno prevezme plnú veľkosť natívneho videa z kamery (žiadne zmenšovanie)
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
                         
+                        // Vykreslenie čistého políčka videa na plátno
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        // OPRAVENÉ: Volanie getImageData priamo zo správneho Canvas prostredia
+                        
+                        // Vytiahnutie pixelov pre dekodér
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        
+                        // Pokus o rozlúštenie kódu pomocou jsQR
                         const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
                         
                         if (code && code.data.trim() !== "") {
+                            // Kód bol úspešne prečítaný – zapíšeme ho do histórie
                             document.getElementById('historia').value = code.data;
-                            statusDiv.innerText = "✅ Štítok úspešne načítaný!";
+                            statusDiv.innerText = "✅ Kód úspešne načítaný!"; 
                             statusDiv.style.color = "#28a745";
                             
-                            clearInterval(scanInterval);
-                            streamObj.getTracks().forEach(t => t.stop());
+                            // Okamžite vypneme kameru, aby nežrala batériu
+                            clearInterval(scanInterval); 
+                            streamObj.getTracks().forEach(t => t.stop()); 
                             video.style.display = "none";
                         }
                     }
-                }, 300);
-
-            } catch (err) {
-                video.style.display = "none";
-                statusDiv.innerText = "Chyba kamery: " + err.message;
-                statusDiv.style.color = "red";
+                }, 200);
+            } catch (err) { 
+                video.style.display = "none"; 
+                statusDiv.innerText = "Chyba kamery: " + err.message; 
+                statusDiv.style.color = "red"; 
             }
         }
 
@@ -137,48 +144,34 @@
             if (!tx) { alert("Pripojte tlačiareň!"); return; }
             let h = document.getElementById('historia').value.trim();
             let k = document.getElementById('km').value.trim();
-            let o = document.getElementById('olej').value.trim();
-            if(!k) { alert("Zadajte KM!"); return; }
-
+            let o = document.getElementById('olej').value.trim(); if(!k) { alert("Zadajte KM!"); return; }
             let d = new Date(), dt = d.getDate() + "." + (d.getMonth()+1) + "." + d.getFullYear();
             let num = (h.match(/VÝMENA/g) || []).length + 1;
             let line = num + ". VÝMENA: " + dt + " | " + k; if(o) line += " (" + o + ")";
             let qrt = h ? h + "\n" + line : line;
-
             try {
-                await tx.writeValue(mkPacket(0xbc, [0x01]));
-                await new Promise(r => setTimeout(r, 80));
-
-                const cvs = document.createElement('canvas'); cvs.width = 400; cvs.height = 240;
-                const ctx = cvs.getContext('2d');
+                await tx.writeValue(mkPacket(0xbc, [0x01])); await new Promise(r => setTimeout(r, 80));
+                const cvs = document.createElement('canvas'); cvs.width = 400; cvs.height = 240; const ctx = cvs.getContext('2d');
                 ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240); ctx.fillStyle = "black";
-
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
                 ctx.font = "bold 17px Arial"; ctx.fillText("Dátum: " + dt, 10, 80);
                 ctx.font = "bold 17px Arial"; ctx.fillText("KM: " + k, 10, 115);
                 if(o) { ctx.font = "15px Arial"; ctx.fillText(o, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História servisu ->", 10, 215);
-
                 const qri = new Image(); qri.crossOrigin = "anonymous";
                 qri.src = "https://qrserver.com" + encodeURIComponent(qrt);
-                
                 qri.onload = async function() {
-                    ctx.drawImage(qri, 240, 45, 145, 145);
-                    const idat = ctx.getImageData(0, 0, 400, 240);
-                    
+                    ctx.drawImage(qri, 240, 45, 145, 145); const idat = ctx.getImageData(0, 0, 400, 240);
                     for (let y = 0; y < 240; y++) {
                         let rBytes = [], b = 0;
                         for (let x = 0; x < 400; x++) {
-                            const idx = (y * 400 + x) * 4;
-                            const jas = (idat.data[idx] + idat.data[idx+1] + idat.data[idx+2]) / 3;
+                            const idx = (y * 400 + x) * 4; const jas = (idat.data[idx] + idat.data[idx+1] + idat.data[idx+2]) / 3;
                             if (jas < 128) b |= (1 << (7 - (x % 8)));
                             if (x % 8 === 7 || x === 399) { rBytes.push(b); b = 0; }
                         }
-                        await tx.writeValue(mkPacket(0x85, rBytes));
-                        await new Promise(r => setTimeout(r, 15));
+                        await tx.writeValue(mkPacket(0x85, rBytes)); await new Promise(r => setTimeout(r, 15));
                     }
-                    await tx.writeValue(mkPacket(0x98, [0x01]));
-                    alert("Štítok vytlačený! 🖨️");
+                    await tx.writeValue(mkPacket(0x98, [0x01])); alert("Štítok vytlačený! 🖨️");
                 };
             } catch (e) { alert("Chyba: " + e.message); }
         }
