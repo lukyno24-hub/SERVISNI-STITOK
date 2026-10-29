@@ -3,86 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Čistý QR Skener</title>
-    <!-- Svetovo najstabilnejšia odľahčená čítačka pre webové prehliadače -->
-    <script src="https://cloudflare.com"></script>
+    <title>Definitívny QR Skener</title>
 </head>
-<body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
+<body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;text-align:center;">
 
-    <h2 style="text-align:center;color:#007bff;margin-bottom:5px;">Čistý QR Skener</h2>
-    <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 1.0 (ČISTÝ SKENER - 1. ČASŤ)
+    <h2 style="color:#007bff;">Čistý QR Skener</h2>
+    <div style="font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
+        Verzia: 2.0 (GOOGLE NATÍVNY REŽIM)
     </div>
 
-    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <!-- Tlačidlo, ktoré priamo prebudí fotoaparát tvojho Blackview -->
-        <button onclick="zapnutSkener()" style="width:100%;padding:14px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Zapnúť fotoaparát</button>
+    <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <!-- Tlačidlo, ktoré donúti Android otvoriť jeho vlastný skener kódov -->
+        <button onclick="spustitGoogleSkener()" style="width:100%;padding:16px;background:#007bff;color:white;border:none;border-radius:5px;font-size:18px;font-weight:bold;cursor:pointer;">📷 Skenovať QR kód</button>
         
-        <div id="status" style="color:#666;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;">Stav: Kamera vypnutá</div>
+        <div id="status" style="margin-top:15px;font-weight:bold;color:#666;">Stav: Čakám na stlačenie...</div>
         
-        <!-- Overené okno pre reálny prenos obrazu z tvojej kamery -->
-        <video id="preview" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
-        
-        <!-- Veľké textové políčko, kde uvidíš výsledok -->
-        <label style="display:block;font-weight:bold;margin-top:15px;margin-bottom:5px;font-size:14px;">Výsledný text z QR kódu:</label>
-        <textarea id="vysledok" rows="6" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:15px;background:#e9ecef;" readonly placeholder="Po úspešnom naskenovaní sa tu hneď objaví text..."></textarea>
+        <label style="display:block;font-weight:bold;margin-top:20px;margin-bottom:5px;text-align:left;">Naskenovaný text:</label>
+        <textarea id="vysledok" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:16px;background:#e9ecef;" readonly></textarea>
     </div>
-    <!-- Načítanie celosvetovo najpoužívanejšieho dekodéru QR kódov -->
-    <script src="https://jsdelivr.net"></script>
 
     <script>
-        let skenerObjekt = null;
+        function spustitGoogleSkener() {
+            const status = document.getElementById('status');
+            status.innerText = "Otváram systémový skener telefónu...";
+            status.style.color = "#fd7e14";
 
-        function zapnutSkener() {
-            const statusDiv = document.getElementById('status');
-            const videoOkno = document.getElementById('preview');
-            const vysledokText = document.getElementById('vysledok');
+            // Použijeme oficiálnu Google intent schému, ktorá povie Androidu, aby okamžite zapol svoj vlastný zaostrený skener kódov
+            const skenerUrl = "intent://scan/#Intent;scheme=zxing;package=com.google.zxing.client.android;S.zxing_developer_id=html5-qrcode;end";
             
-            statusDiv.innerText = "Zapínam fotoaparát a žiadam o povolenie...";
-            statusDiv.style.color = "#fd7e14";
-            videoOkno.style.display = "block";
-            vysledokText.value = ""; // Vyčistiť starý text
-
-            // Ak už nejaký skener bežal na pozadí, bezpečne ho vypneme
-            if (skenerObjekt) {
-                try { skenerObjekt.stop(); } catch(e) {}
-            }
-
-            // Inicializácia čistého skeneru naviazaného na naše okno
-            skenerObjekt = new Html5Qrcode("preview");
-
-            // Konfigurácia pre skenovanie: 10 snímok za sekundu, stredový zameriavací štvorec
-            const nastavenie = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-            // Vynútenie spustenia zadného (hlavného) objektívu na Blackview
-            skenerObjekt.start(
-                { facingMode: "environment" },
-                nastavenie,
-                (textKodu) => {
-                    // KROK PRI ÚSPECHU: Kód bol zachytený a rozlúštený procesorom
-                    vysledokText.value = textKodu;
-                    statusDiv.innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ!";
-                    statusDiv.style.color = "#28a745";
-                    
-                    // Automatické vypnutie kamery po úspechu, aby nežrala batériu
-                    skenerObjekt.stop().then(() => {
-                        videoOkno.style.display = "none";
-                    });
-                },
-                (chybaHladania) => {
-                    // Tichá ignorácia – prehliadač len oznamuje, že na danom snímku kód ešte nenašiel
-                }
-            ).then(() => {
-                statusDiv.innerText = "📷 Skener beží! Zamier na akýkoľvek QR kód.";
-                statusDiv.style.color = "#007bff";
-            }).catch((hardverovaChyba) => {
-                // KROK PRI HARDVÉROVEJ CHYBE: Ak telefón prístup zablokoval
-                videoOkno.style.display = "none";
-                statusDiv.innerText = "Chyba: " + hardverovaChyba + ". Skontroluj, či si v anonymnom okne povolil kameru.";
-                statusDiv.style.color = "red";
-                console.error(hardverovaChyba);
-            });
+            // Otvoríme systémovú aplikáciu
+            window.location.href = skenerUrl;
+            
+            // Nastavíme kontrolu pre prípad, že by telefón skener nemal nainštalovaný
+            setTimeout(() => {
+                status.innerText = "Ak sa skener neotvoril, stiahni si z Obchodu Play 'Google Lens' alebo 'Zxing QR Barcode Scanner'.";
+                status.style.color = "red";
+            }, 2500);
         }
+
+        // Tento skript zachytí text, ktorý systémový skener po prečítaní vráti naspäť na našu stránku
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const vysledokText = urlParams.get('scan_result') || urlParams.get('id');
+            
+            if (vysledokText) {
+                document.getElementById('vysledok').value = decodeURIComponent(vysledokText);
+                document.getElementById('status').innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ SYSTÉMOM!";
+                document.getElementById('status').style.color = "#28a745";
+            }
+        });
     </script>
 </body>
 </html>
