@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olej Asistent M2</title>
-    <!-- Stabilná knižnica html5-qrcode -->
+    <!-- Odľahčený dekódovací čip pre natívne video -->
     <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 5.2.0 (BYPASS KAMERY)
+        Verzia: 5.4.0 (OBNOVENÁ KAMERA)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -24,7 +24,9 @@
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
         <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;margin-bottom:10px;">📷 Naskenovať starý štítok</button>
         <div id="kamera-status" style="color:#007bff;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;"></div>
-        <div id="reader" style="display:none;width:100%;max-width:400px;margin:auto;border:1px solid #ccc;border-radius:5px;overflow:hidden;background:#000;"></div>
+        <!-- Overené plátno z verzie 4.0.6 -->
+        <video id="video" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
+        <canvas id="qr-canvas" style="display:none;"></canvas>
         <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;" placeholder="Stará história výmen..."></textarea>
     </div>
 
@@ -37,7 +39,7 @@
     <!-- 4. TLAČ -->
     <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;">🖨️ Vytlačiť nový štítok</button>
     <script>
-        let tx = null, rx = null, html5QrcodeScanner = null;
+        let tx = null, rx = null, streamObj = null, scanInterval = null;
         const uuids = [
             "0000fee7-0000-1000-8000-00805f9b34fb",
             "0000e7fe-0000-1000-8000-00805f9b34fb",
@@ -82,50 +84,59 @@
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
-        // Opravená funkcia – ak sa zasekne hľadanie, vynúti si štandardný video kanál
-        function skenovat() {
+        // Obnovená a oživená funkcia kamery z verzie 4.0.6 s opraveným čítaním
+        async function skenovat() {
             const statusDiv = document.getElementById('kamera-status');
-            const readerDiv = document.getElementById('reader');
-            statusDiv.innerText = "Spúšťam kameru...";
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('qr-canvas');
+            const ctx = canvas.getContext('2d');
+            statusDiv.innerText = "Spúšťam fotoaparát...";
             statusDiv.style.color = "#fd7e14";
-            readerDiv.style.display = "block";
+            
+            try {
+                if (streamObj) { streamObj.getTracks().forEach(t => t.stop()); clearInterval(scanInterval); }
 
-            if (html5QrcodeScanner) { try { html5QrcodeScanner.stop(); } catch(e){} }
-
-            html5QrcodeScanner = new Html5Qrcode("reader");
-
-            // Optimalizovaná konfigurácia bez zbytočných filtrov
-            const config = { fps: 15, qrbox: (width, height) => { return { width: 250, height: 250 }; } };
-
-            // Pokus o priame otvorenie zadnej kamery
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                config,
-                (decodedText) => {
-                    document.getElementById('historia').value = decodedText;
-                    statusDiv.innerText = "✅ Kód úspešne načítaný!";
-                    statusDiv.style.color = "#28a745";
-                    html5QrcodeScanner.stop().then(() => { readerDiv.style.display = "none"; });
-                },
-                () => {}
-            ).catch(() => {
-                // BYPASS REŽIM: Ak zlyhá filter na zadnú kameru, program si vypýta akúkoľvek voľnú kameru v systéme
-                html5QrcodeScanner.start(
-                    undefined, // Zruší filter hardvéru, zoberie prvú voľnú kameru
-                    config,
-                    (decodedText) => {
-                        document.getElementById('historia').value = decodedText;
-                        statusDiv.innerText = "✅ Kód úspešne načítaný!";
-                        statusDiv.style.color = "#28a745";
-                        html5QrcodeScanner.stop().then(() => { readerDiv.style.display = "none"; });
-                    },
-                    () => {}
-                ).catch((err) => {
-                    readerDiv.style.display = "none";
-                    statusDiv.innerText = "Chyba prístupu: Kamera je blokovaná inou aplikáciou alebo systémom.";
-                    statusDiv.style.color = "red";
+                // Čisté vyžiadanie obrazu bez zbytočných filtrov knižníc
+                streamObj = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
                 });
-            });
+
+                video.srcObject = streamObj;
+                video.style.display = "block";
+                statusDiv.innerText = "📷 Kamera aktívna. Zamier na QR kód štítku...";
+                statusDiv.style.color = "#007bff";
+
+                // Slučka, ktorá neustále skenuje video obraz na pozadí
+                scanInterval = setInterval(() => {
+                    if (video.readyState === video.HAVE_CURRENT_DATA) {
+                        // Nastavenie ideálneho rozlíšenia plátna pre hladké dekódovanie v mobile
+                        canvas.width = 480;
+                        canvas.height = Math.floor(video.videoHeight * (480 / video.videoWidth));
+                        
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imgData = ctx.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+                        
+                        // Dekódovanie cez jsQR
+                        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+                        
+                        if (code && code.data.trim() !== "") {
+                            document.getElementById('historia').value = code.data;
+                            statusDiv.innerText = "✅ Štítok úspešne načítaný!";
+                            statusDiv.style.color = "#28a745";
+                            
+                            // Automatické bezpečné vypnutie kamery
+                            clearInterval(scanInterval);
+                            streamObj.getTracks().forEach(t => t.stop());
+                            video.style.display = "none";
+                        }
+                    }
+                }, 300);
+
+            } catch (err) {
+                video.style.display = "none";
+                statusDiv.innerText = "Chyba kamery: " + err.message + ". Skontroluj povolenie fotoaparátu v nastaveniach prehliadača.";
+                statusDiv.style.color = "red";
+            }
         }
 
         async function tlac() {
