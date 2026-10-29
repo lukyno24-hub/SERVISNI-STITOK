@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- Skener stiahne overenú stabilnú verziu -->
+    <!-- Načítame iba skener, ktorý funguje stopercentne -->
     <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333;">
@@ -34,44 +34,44 @@
     </div>
 
     <!-- TLAČ -->
-    <button onclick="tlacitStitok()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ Vytlačiť nový štítok</button>
+    <button onclick="tlacit()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ Vytlačiť nový štítok</button>
 
     <script>
-        // --- VSTAVANÝ NIIMBOT BLUETOOTH OVLÁDAČ ---
-        let bluetoothZariadenie = null;
-        let gattServer = null;
-        let zapisovaciaCharakteristika = null;
+        let rxChar = null;
+        let txChar = null;
         let skener = null;
 
-        // UUID kódy pre bezdrôtovú komunikáciu s Niimbot tlačiarňami
+        // Oficiálne UUID pre komunikáciu s Niimbot hardvérom
         const SERVICE_UUID = "0000fee7-0000-1000-8000-00805f9b34fb";
+        const NOTIFY_CHAR_UUID = "000036e2-0000-1000-8000-00805f9b34fb";
         const WRITE_CHAR_UUID = "000036e1-0000-1000-8000-00805f9b34fb";
 
         async function pripojitTlaciaren() {
             const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "Vyhľadávanie tlačiarne...";
+            statusDiv.innerText = "Pripájanie...";
             try {
                 if (!navigator.bluetooth) {
-                    throw new Error("Tvoj prehliadač nepodporuje Bluetooth. Na Androide použi Chrome, na iPhone aplikáciu Bluefy.");
+                    throw new Error("Bluetooth nie je v prehliadači podporovaný alebo povolený.");
                 }
 
-                // Vyvolanie okna na výber Niimbot tlačiarne
-                bluetoothZariadenie = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'M2_' }, { namePrefix: 'NIIMBOT' }, { services: [SERVICE_UUID] }],
+                // Vyhľadávanie tlačiarne M2
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { services: [SERVICE_UUID] }],
                     optionalServices: [SERVICE_UUID]
                 });
 
-                statusDiv.innerText = "Pripájanie k tlačiarni...";
-                gattServer = await bluetoothZariadenie.gatt.connect();
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
                 
-                const servis = await gattServer.getPrimaryService(SERVICE_UUID);
-                zapisovaciaCharakteristika = await servis.getCharacteristic(WRITE_CHAR_UUID);
+                txChar = await service.getCharacteristic(WRITE_CHAR_UUID);
+                rxChar = await service.getCharacteristic(NOTIFY_CHAR_UUID);
+                await rxChar.startNotifications();
 
-                // Odoslanie úvodného overovacieho paketu do tlačiarne
-                const pociatocnyPaket = new Uint8Array([0x55, 0x55, 0x01, 0x01, 0x00, 0x00, 0x02]);
-                await zapisovaciaCharakteristika.writeValue(pociatocnyPaket);
+                // Odoslanie štartovacieho príkazu priamo v čistých bajtoch
+                const startPacket = new Uint8Array([0x55, 0x55, 0x01, 0x01, 0x00, 0x00, 0x02]);
+                await txChar.writeValue(startPacket);
 
-                statusDiv.innerText = "Niimbot M2 Úspešne pripojená! ✅";
+                statusDiv.innerText = "Tlačiareň prepojená úspešne! ✅";
                 statusDiv.style.color = "#28a745";
             } catch (e) {
                 statusDiv.innerText = "Chyba: " + e.message;
@@ -94,27 +94,12 @@
             ).catch(err => alert("Chyba kamery: " + err));
         }
 
-        // Funkcia na posielanie tlačových dát po menších kúskoch (bitoch)
-        async function posliData(data) {
-            if (!zapisovaciaCharakteristika) return;
-            const VELKOST_BALIKA = 20;
-            for (let i = 0; i < data.length; i += VELKOST_BALIKA) {
-                const balik = data.slice(i, i + VELKOST_BALIKA);
-                await zapisovaciaCharakteristika.writeValue(balik);
-                await new Promise(r => setTimeout(r, 50));
-            }
-        }
-
-        async function tlacitStitok() {
-            if (!zapisovaciaCharakteristika) { 
-                alert("Najprv pripoj tlačiareň cez oranžové tlačidlo!"); 
-                return; 
-            }
-            
+        async function tlacit() {
+            if (!txChar) { alert("Najprv pripoj tlačiareň!"); return; }
             let staráHistória = document.getElementById('historia').value.trim();
             let km = document.getElementById('km').value.trim();
             let olej = document.getElementById('olej').value.trim();
-            if(!km) { alert("Doplň kilometre!"); return; }
+            if(!km) { alert("Zadaj kilometre!"); return; }
 
             let dnes = new Date();
             let datum = dnes.getDate() + "." + (dnes.getMonth()+1) + "." + dnes.getFullYear();
@@ -125,65 +110,59 @@
             let kompletnyQR = staráHistória ? staráHistória + "\n" + novyRiadok : novyRiadok;
 
             try {
-                // Príprava grafiky (štítok rozmer 400x240 pixelov)
+                // Príprava čistého kresliaceho plátna pre štítok
                 const canvas = document.createElement('canvas');
                 canvas.width = 400; canvas.height = 240;
                 const ctx = canvas.getContext('2d');
-                
-                // Vyčistenie a nastavenie bieleho pozadia s čiernym textom
                 ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240);
                 ctx.fillStyle = "black";
 
-                // Vykreslenie textových polí na štítok
+                // Vykreslenie textu
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
                 ctx.font = "18px Arial"; ctx.fillText("Dátum: " + datum, 10, 80);
                 ctx.font = "18px Arial"; ctx.fillText("KM: " + km, 10, 115);
                 if(olej) { ctx.font = "16px Arial"; ctx.fillText(olej, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História ->", 15, 205);
 
-                // Vytvorenie a vykreslenie QR kódu priamo cez Google API, aby sme nepotrebovali externú knižnicu
-                const qrImage = new Image();
-                qrImage.crossOrigin = "anonymous";
-                qrImage.src = "https://qrserver.com" + encodeURIComponent(kompletnyQR);
+                // Načítanie QR kódu z rýchleho generátora obrázkov Google API
+                const qrImg = new Image();
+                qrImg.crossOrigin = "anonymous";
+                qrImg.src = "https://qrserver.com" + encodeURIComponent(kompletnyQR);
                 
-                qrImage.onload = async function() {
-                    ctx.drawImage(qrImage, 240, 45, 145, 145);
+                qrImg.onload = async function() {
+                    ctx.drawImage(qrImg, 245, 45, 140, 140);
                     
-                    // Prevod nakresleného štítku do čistých tlačových dát (jednobitová čiernobiela matica)
                     const imgData = ctx.getImageData(0, 0, 400, 240);
-                    let tlacoveBity = [];
-                    
-                    // Hlavička príkazu pre začiatok tlače (Niimbot protokol)
-                    tlacoveBity.push(0x55, 0x55, 0x03, 0x01, 0x01, 0x01, 0x06); 
-                    
-                    // Transformácia pixelov z obrazovky do riadkov pre tlačovú hlavu
+                    let rawBytes = [];
+
+                    // Hlavička štartu tlače
+                    rawBytes.push(0x55, 0x55, 0x03, 0x01, 0x01, 0x01, 0x06);
+
+                    // Prevod nakreslených pixelov do binárnej formy pre tlačovú hlavu
                     for (let y = 0; y < 240; y++) {
                         let bajt = 0;
                         for (let x = 0; x < 400; x++) {
                             const idx = (y * 400 + x) * 4;
-                            const r = imgData.data[idx];
-                            const g = imgData.data[idx+1];
-                            const b = imgData.data[idx+2];
-                            const jas = (r + g + b) / 3;
-                            
-                            if (jas < 128) {
-                                bajt |= (1 << (7 - (x % 8)));
-                            }
+                            const jas = (imgData.data[idx] + imgData.data[idx+1] + imgData.data[idx+2]) / 3;
+                            if (jas < 128) bajt |= (1 << (7 - (x % 8)));
                             if (x % 8 === 7 || x === 399) {
-                                tlacoveBity.push(bajt);
+                                rawBytes.push(bajt);
                                 bajt = 0;
                             }
                         }
                     }
-                    
-                    // Koncový príkaz pre odstrihnutie/posun papiera
-                    tlacoveBity.push(0x55, 0x55, 0x04, 0x01, 0x01, 0x01, 0x07);
 
-                    // Odoslanie balíka dát priamo do tlačiarne
-                    await posliData(new Uint8Array(tlacoveBity));
-                    alert("Štítok úspešne odoslaný na tlač!");
+                    // Koncový packet pre ukončenie a posun
+                    rawBytes.push(0x55, 0x55, 0x04, 0x01, 0x01, 0x01, 0x07);
+
+                    // Posielanie dát po malých bezpečných 20-bajtových blokoch
+                    const dataToSend = new Uint8Array(rawBytes);
+                    for (let i = 0; i < dataToSend.length; i += 20) {
+                        await txChar.writeValue(dataToSend.slice(i, i + 20));
+                        await new Promise(r => setTimeout(r, 40));
+                    }
+                    alert("Štítok poslaný do tlače!");
                 };
-
             } catch (e) {
                 alert("Chyba tlače: " + e.message);
             }
