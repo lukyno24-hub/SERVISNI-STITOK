@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olej Asistent M2</title>
-    <!-- Stabilné jadro pre čítanie QR kódov z obrázkov -->
+    <!-- Stabilné a overené jadro pre čítanie QR kódov -->
     <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 9.0.0 (ČISTÝ FOTO SKENER)
+        Verzia: 9.1.0 (PAMÄŤOVÝ FIX)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -28,7 +28,7 @@
         <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none;" onchange="spracovatFoto(this)">
         
         <div id="kamera-status" style="color:#fd7e14;font-weight:bold;text-align:center;margin-top:10px;font-size:14px;"></div>
-        <textarea id="historia" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;font-family:monospace;" placeholder="Tu sa MUSÍ objaviť text z QR kódu po úspešnom odfotení..."></textarea>
+        <textarea id="historia" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;font-family:monospace;" placeholder="Sem sa vypíše text z QR kódu..."></textarea>
     </div>
 
     <!-- 3. FORMULÁR A TLAČ -->
@@ -69,12 +69,12 @@
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
-        // SPRACOVANIE FOTOGRAFIE VO VYSOKOM ROZLÍŠENÍ
+        // BEZPEČNÉČÍTANIE PRE BLACKVIEW BEZ ZAMRZNUTIA PREHLIADAČA
         function spracovatFoto(input) {
             const statusDiv = document.getElementById('kamera-status');
             if (!input.files || input.files.length === 0) return;
             
-            statusDiv.innerText = "🔍 Dekódujem fotografiu...";
+            statusDiv.innerText = "🔍 Spracovávam snímku hardvérovo...";
             statusDiv.style.color = "#fd7e14";
 
             const file = input.files[0];
@@ -86,27 +86,27 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    // Zväčšujeme rozlíšenie na 1600 pixelov pre zachovanie maximálnej ostrosti štvorčekov
-                    const OSTRA_SIRKA = 1600;
+                    // Zlatá stredná cesta pre zachovanie ostrosti bez preťaženia pamäte tvojho mobilu
+                    const OPTIMALNA_SIRKA = 1000;
                     let w = img.width;
                     let h = img.height;
-                    h *= OSTRA_SIRKA / w;
-                    w = OSTRA_SIRKA;
+                    h *= OPTIMALNA_SIRKA / w;
+                    w = OPTIMALNA_SIRKA;
 
                     canvas.width = w; canvas.height = h;
                     ctx.drawImage(img, 0, 0, w, h);
 
                     const imgData = ctx.getImageData(0, 0, w, h);
                     
-                    // Pokus o prečítanie ostrého záberu
+                    // Dekódovanie upravenej, odľahčenej snímky
                     const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
 
                     if (code && code.data.trim() !== "") {
                         document.getElementById('historia').value = code.data;
-                        statusDiv.innerText = "✅ ÚSPEŠNE PREČÍTANÉ!";
+                        statusDiv.innerText = "✅ KÓD ÚSPEŠNE ROZLÚŠTENÝ!";
                         statusDiv.style.color = "#28a745";
                     } else {
-                        statusDiv.innerText = "❌ QR kód sa nepodarilo rozlúštiť. Skús odfotiť viac zblízka, kolmo a zaostriť priamo na kód.";
+                        statusDiv.innerText = "❌ QR kód sa v tejto fotke nenašiel. Skús odfotiť o niečo viac zblízka a uisti sa, že fotoaparát pred odfotením zaostril na kód.";
                         statusDiv.style.color = "#dc3545";
                     }
                 };
@@ -153,3 +153,5 @@
     </script>
 </body>
 </html>
+
+
