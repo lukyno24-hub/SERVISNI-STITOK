@@ -11,7 +11,7 @@
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 7.0.0 (BLACKVIEW SPECIAL)
+        Verzia: 7.1.0 (BLACKVIEW FIX)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -20,14 +20,13 @@
         <div id="status" style="font-weight:bold;text-align:center;margin-top:10px;color:#666;">Stav: Odpojená</div>
     </div>
 
-    <!-- 2. SKENER S POLÍČKOM PRE VÝBER OBJEKTÍVU -->
+    <!-- 2. SKENER PRE BLACKVIEW -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
         <button onclick="spustitSkener()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Zapnúť skener</button>
         
-        <!-- Výber objektívu pre Blackview (hlavná vs termokamera vs širokouhlá) -->
-        <label style="font-weight:bold;font-size:13px;color:#555;">Prepínanie objektívov:</label>
+        <label style="font-weight:bold;font-size:13px;color:#555;">Prepínanie objektívov (Blackview):</label>
         <select id="vyber-kamery" style="width:100%;padding:10px;margin-top:5px;margin-bottom:10px;border-radius:5px;border:1px solid #ccc;font-size:14px;" onchange="zmenaKamery(this.value)">
-            <option value="">-- Najprv klikni na Zapnúť skener --</option>
+            <option value="">-- Čakám na zapnutie videa --</option>
         </select>
 
         <div id="kamera-status" style="color:#007bff;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;"></div>
@@ -45,7 +44,6 @@
     <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;cursor:pointer;">🖨️ Vytlačiť štítok</button>
     <script>
         let tx = null, rx = null, html5QrcodeScanner = null;
-        let dostupneKamery = [];
         const uuids = [
             "0000fee7-0000-1000-8000-00805f9b34fb",
             "0000e7fe-0000-1000-8000-00805f9b34fb",
@@ -82,62 +80,66 @@
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
-        // Vyžiadanie hardvéru a naplnenie zoznamu objektívov Blackview
+        // BLACKVIEW SPECIAL: Najprv video prúd, potom zoznam objektívov
         function spustitSkener() {
             const statusDiv = document.getElementById('kamera-status');
-            const selectMenu = document.getElementById('vyber-kamery');
             const readerDiv = document.getElementById('reader');
             
-            statusDiv.innerText = "Hľadám dostupné kamery...";
+            statusDiv.innerText = "Prebúdzam fotoaparát...";
             statusDiv.style.color = "#fd7e14";
             readerDiv.style.display = "block";
 
             if (html5QrcodeScanner) { try { html5QrcodeScanner.stop(); } catch(e){} }
             html5QrcodeScanner = new Html5Qrcode("reader");
 
-            // Krok 1: Vypýtame si zoznam všetkých fotoaparátov v Blackview
-            Html5Qrcode.getCameras().then(cameras => {
-                dostupneKamery = cameras;
-                if (cameras && cameras.length > 0) {
-                    // Vyčistíme staré menu
-                    selectMenu.innerHTML = "";
-                    
-                    // Naplníme výberové políčko všetkými nájdenými objektívmi
-                    cameras.forEach((camera, index) => {
-                        let nazovKamery = camera.label || `Kamera ${index + 1}`;
-                        let option = document.createElement("option");
-                        option.value = camera.id;
-                        option.text = nazovKamery;
-                        selectMenu.appendChild(option);
-                    });
+            const config = { fps: 12, qrbox: { width: 250, height: 250 } };
 
-                    // Automaticky skúsime spustiť prvú zadnú kameru v poradí
-                    // Pri Blackview často pomáha začať od konca zoznamu, kde býva hlavný snímač
-                    let pociatocnaKameraId = cameras[0].id;
-                    if (cameras.length > 1) {
-                        pociatocnaKameraId = cameras[cameras.length - 1].id;
-                        selectMenu.value = pociatocnaKameraId;
+            // Krok 1: Natvrdo vynútime štart cez systémový filter zadnej kamery
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    document.getElementById('historia').value = decodedText;
+                    statusDiv.innerText = "✅ Kód úspešne načítaný!";
+                    statusDiv.style.color = "#28a745";
+                    html5QrcodeScanner.stop().then(() => { readerDiv.style.display = "none"; });
+                },
+                () => {}
+            ).then(() => {
+                statusDiv.innerText = "📷 Obraz nabehol. Načítavam ostatné objektívy...";
+                statusDiv.style.color = "#007bff";
+
+                // Krok 2: Až keď video reálne beží, vypýtame si zoznam skrytých kamier Blackview
+                Html5Qrcode.getCameras().then(cameras => {
+                    const selectMenu = document.getElementById('vyber-kamery');
+                    if (cameras && cameras.length > 0) {
+                        selectMenu.innerHTML = "";
+                        cameras.forEach((camera, index) => {
+                            let nazovKamery = camera.label || `Objektív ${index + 1}`;
+                            let option = document.createElement("option");
+                            option.value = camera.id;
+                            option.text = nazovKamery;
+                            selectMenu.appendChild(option);
+                        });
+                        // Označíme v menu, že momentálne beží táto prvá inicializovaná kamera
+                        statusDiv.innerText = "📷 Skener beží. Ak je obraz zlý/rozmazaný, prepni objektív v menu vyššie!";
                     }
-                    
-                    startovanieKonkretnejKamery(pociatocnaKameraId);
-                } else {
-                    statusDiv.innerText = "Chyba: Nenašli sa žiadne fotoaparáty.";
-                    statusDiv.style.color = "red";
-                }
+                }).catch(() => {});
+
             }).catch(err => {
-                statusDiv.innerText = "Chyba prístupu: Použi Chrome/Bluefy a povol foťák.";
+                readerDiv.style.display = "none";
+                statusDiv.innerText = "Chyba prístupu: " + err + ". Skontroluj povolenie foťáku.";
                 statusDiv.style.color = "red";
             });
         }
 
-        // Spustenie vybraného objektívu zo zoznamu
         function startovanieKonkretnejKamery(cameraId) {
             const statusDiv = document.getElementById('kamera-status');
             const readerDiv = document.getElementById('reader');
-            statusDiv.innerText = "Aktivujem vybraný objektív...";
+            statusDiv.innerText = "Prepínam objektív...";
             statusDiv.style.color = "#fd7e14";
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = { fps: 12, qrbox: { width: 250, height: 250 } };
 
             html5QrcodeScanner.start(
                 cameraId,
@@ -148,17 +150,16 @@
                     statusDiv.style.color = "#28a745";
                     html5QrcodeScanner.stop().then(() => { readerDiv.style.display = "none"; });
                 },
-                (errorMessage) => { /* priebežné hľadanie */ }
+                () => {}
             ).then(() => {
-                statusDiv.innerText = "📷 Skener beží. Ak je obraz rozmazaný alebo z termokamery, prepni objektív v menu vyššie.";
+                statusDiv.innerText = "📷 Skener beží na vybranom objektíve.";
                 statusDiv.style.color = "#007bff";
             }).catch(err => {
-                statusDiv.innerText = "Chyba spustenia tohto objektívu: " + err;
+                statusDiv.innerText = "Chyba prepnutia: " + err;
                 statusDiv.style.color = "red";
             });
         }
 
-        // Funkcia, ktorá reaguje na manuálne prepnutie v rozbaľovacom menu
         function zmenaKamery(cameraId) {
             if (!cameraId) return;
             if (html5QrcodeScanner) {
