@@ -3,97 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Čistý QR Skener</title>
-    <!-- Odľahčený dekódovací čip jsQR -->
-    <script src="https://jsdelivr.net"></script>
+    <title>Olej Asistent M2</title>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;text-align:center;">
 
-    <h2>Čistý QR Skener</h2>
+    <h2 style="color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 1.0 (ZAMERANÉ NA ČÍTANIE)
+        Verzia: 11.0.0 (ČIERNOBIELY FILTER CODES)
     </div>
 
-    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-        <!-- Tlačidlo, ktoré overene prebudí kameru -->
-        <button onclick="skenovat()" style="width:100%;padding:14px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Zapnúť fotoaparát</button>
+    <!-- 1. BLUETOOTH -->
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;text-align:left;">
+        <button onclick="pripojit()" style="width:100%;padding:14px;background:#fd7e14;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;">🔌 Pripojiť Niimbot M2</button>
+        <div id="status" style="font-weight:bold;text-align:center;margin-top:10px;color:#666;">Stav: Odpojená</div>
+    </div>
+
+    <!-- 2. SKENER -->
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;text-align:left;">
+        <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Zapnúť fotoaparát</button>
+        <div id="kamera-status" style="color:#007bff;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;">Stav: Kamera vypnutá</div>
         
-        <div id="kamera-status" style="color:#007bff;font-weight:bold;margin-bottom:10px;font-size:14px;">Stav: Kamera vypnutá</div>
-        
-        <!-- Video okno pre zobrazenie obrazu -->
         <video id="video" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
-        
-        <!-- Skryté plátno na pozadí, z ktorého teraz správne čítame pixely -->
         <canvas id="qr-canvas" style="display:none;"></canvas>
         
-        <label style="display:block;font-weight:bold;margin-top:15px;margin-bottom:5px;text-align:left;">Výsledok z QR kódu:</label>
-        <textarea id="vysledok" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:15px;background:#e9ecef;" readonly></textarea>
+        <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;font-family:monospace;" placeholder="Stará história výmen..."></textarea>
     </div>
 
-    <script>
-        let streamObj = null;
-        let scanInterval = null;
+    <!-- 3. FORMULÁR -->
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
+        <input type="text" id="km" style="width:100%;padding:11px;margin-bottom:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Aktuálne KM (napr. 155 200)">
+        <input type="text" id="olej" style="width:100%;padding:11px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Olej / Poznámka (napr. 5W-30)">
+    </div>
 
+    <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;cursor:pointer;">🖨️ Vytlačiť nový štítok</button>
+    <script>
+        let tx = null, rx = null, streamObj = null, scanInterval = null;
+        const uuids = [
+            "0000fee7-0000-1000-8000-00805f9b34fb",
+            "0000e7fe-0000-1000-8000-00805f9b34fb",
+            "0000ff00-0000-1000-8000-00805f9b34fb",
+            "0000ff10-0000-1000-8000-00805f9b34fb"
+        ];
+
+        function mkPacket(cmd, data = []) {
+            let p = [0x55, 0x55, cmd, data.length, ...data];
+            let cs = cmd ^ data.length; for(let d of data) cs ^= d;
+            p.push(cs, 0xaa, 0xaa); return new Uint8Array(p);
+        }
+
+        async function pripojit() {
+            const st = document.getElementById('status'); st.innerText = "Vyhľadávanie...";
+            try {
+                if (!navigator.bluetooth) throw new Error("Bluetooth nie je povolený.");
+                const dev = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { namePrefix: 'JC' }], optionalServices: uuids
+                });
+                st.innerText = "Pripájanie k GATT..."; const srv = await dev.gatt.connect(); let svc = null;
+                for (let u of uuids) { try { svc = await srv.getPrimaryService(u); if (svc) break; } catch(e){} }
+                if (!svc) throw new Error("Služba nenájdená.");
+                
+                const chs = await svc.getCharacteristics();
+                for (let c of chs) {
+                    if (c.properties.write || c.properties.writeWithoutResponse) tx = c;
+                    if (c.properties.notify || c.properties.indicate) rx = c;
+                }
+                if (!tx) throw new Error("Zápisový kanál nenájdený.");
+                if (rx) await rx.startNotifications().catch(()=>{});
+
+                await tx.writeValue(mkPacket(0x01, [0x01]));
+                await new Promise(r => setTimeout(r, 80));
+                await tx.writeValue(mkPacket(0x40, [0x01]));
+
+                st.innerText = "Tlačiareň prepojená! ✅"; st.style.color = "#28a745";
+            } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
+        }
+
+        // AKTUÁLNY SKENER: Používa hardvérovú akceleráciu procesora
         async function skenovat() {
             const statusDiv = document.getElementById('kamera-status');
             const video = document.getElementById('video');
-            const canvas = document.getElementById('qr-canvas');
-            const ctx = canvas.getContext('2d');
-            const vysledokBox = document.getElementById('vysledok');
-            
             statusDiv.innerText = "Spúšťam fotoaparát...";
             statusDiv.style.color = "#fd7e14";
-            vysledokBox.value = "";
             
             try {
-                // Ak niečo bežalo, najprv to vypneme
                 if (streamObj) { streamObj.getTracks().forEach(t => t.stop()); clearInterval(scanInterval); }
 
-                // TVOJ OVERENÝ PRÍKAZ, KTORÝM SME KAMERU VŽDY PREBUDILI
+                // Spustenie tvojej overenej a funkčnej kamery
                 streamObj = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" }
                 });
 
                 video.srcObject = streamObj;
                 video.style.display = "block";
-                statusDiv.innerText = "📷 Kamera beží. Zamier na QR kód...";
+                statusDiv.innerText = "📷 Skenujem... Drž kód stabilne pred objektívom.";
                 statusDiv.style.color = "#007bff";
 
-                // Opravená slučka na analýzu obrazu na pozadí
-                scanInterval = setInterval(() => {
+                // Kontrola prítomnosti hardvérového skenera v Androide
+                if (!window.BarcodeDetector) {
+                    // Záložný preklad, ak prehliadač vyžaduje polyfill
+                    statusDiv.innerText = "Zariadenie nepodporuje priamy BarcodeDetector. Skús aktualizovať Chrome.";
+                    statusDiv.style.color = "red";
+                    return;
+                }
+
+                const detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+                // Slučka, ktorá posiela video rovno procesoru telefónu bez kopírovania pixelov na plátno
+                scanInterval = setInterval(async () => {
                     if (video.readyState === video.HAVE_CURRENT_DATA) {
-                        // Nastavíme plátno presne podľa veľkosti idúceho videa
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        
-                        // Nakreslíme aktuálne políčko z videa na plátno
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        
-                        // OPRAVENÁ RIADOK: Pixely ťaháme zo správneho plátna (canvas), nie z kontextu (ctx)
-                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        
-                        // Posielame čisté pixely dekodéru jsQR
-                        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
-                        
-                        if (code && code.data.trim() !== "") {
-                            // Úspech – zapíšeme výsledok na displej
-                            vysledokBox.value = code.data;
-                            statusDiv.innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ!";
-                            statusDiv.style.color = "#28a745";
-                            
-                            // Automaticky vypneme video kanál
-                            clearInterval(scanInterval);
-                            streamObj.getTracks().forEach(t => t.stop());
-                            video.style.display = "none";
+                        try {
+                            const barcodes = await detector.detect(video);
+                            if (barcodes.length > 0) {
+                                // Kód úspešne prečítaný hardvérom tvojho mobilu
+                                document.getElementById('historia').value = barcodes[0].rawValue;
+                                statusDiv.innerText = "✅ KÓD ÚSÚPEŠNE NASKENOVANÝ!";
+                                statusDiv.style.color = "#28a745";
+                                
+                                clearInterval(scanInterval);
+                                streamObj.getTracks().forEach(t => t.stop());
+                                video.style.display = "none";
+                            }
+                        } catch (e) {
+                            console.error("Chyba detekcie: ", e);
                         }
                     }
-                }, 300); // Kontrola obrazu prebieha každých 300 milisekúnd
+                }, 200);
 
             } catch (err) {
                 video.style.display = "none";
                 statusDiv.innerText = "Chyba kamery: " + err.message;
                 statusDiv.style.color = "red";
             }
+        }
+
+        async function tlac() {
+            if (!tx) { alert("Pripojte tlačiareň!"); return; }
+            let h = document.getElementById('historia').value.trim();
+            let k = document.getElementById('km').value.trim();
+            let o = document.getElementById('olej').value.trim();
+            if(!k) { alert("Zadajte KM!"); return; }
+
+            let d = new Date(), dt = d.getDate() + "." + (d.getMonth()+1) + "." + d.getFullYear();
+            let num = (h.match(/VÝMENA/g) || []).length + 1;
+            let line = num + ". VÝMENA: " + dt + " | " + k; if(o) line += " (" + o + ")";
+            let qrt = h ? h + "\n" + line : line;
+
+            try {
+                await tx.writeValue(mkPacket(0xbc, [0x01]));
+                await new Promise(r => setTimeout(r, 80));
+
+                const cvs = document.createElement('canvas'); cvs.width = 400; cvs.height = 240;
+                const ctx = cvs.getContext('2d');
+                ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240); ctx.fillStyle = "black";
+
+                ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
+                ctx.font = "bold 17px Arial"; ctx.fillText("Dátum: " + dt, 10, 80);
+                ctx.font = "bold 17px Arial"; ctx.fillText("KM: " + k, 10, 115);
+                if(o) { ctx.font = "15px Arial"; ctx.fillText(o, 10, 150); }
+                ctx.font = "italic 11px Arial"; ctx.fillText("História servisu ->", 10, 215);
+
+                const qri = new Image(); qri.crossOrigin = "anonymous";
+                qri.src = "https://qrserver.com" + encodeURIComponent(qrt);
+                
+                qri.onload = async function() {
+                    ctx.drawImage(qri, 240, 45, 145, 145);
+                    const idat = ctx.getImageData(0, 0, 400, 240);
+                    
+                    for (let y = 0; y < 240; y++) {
+                        let rBytes = [], b = 0;
+                        for (let x = 0; x < 400; x++) {
+                            const idx = (y * 400 + x) * 4;
+                            const jas = (idat.data[idx] + idat.data[idx+1] + idat.data[idx+2]) / 3;
+                            if (jas < 128) b |= (1 << (7 - (x % 8)));
+                            if (x % 8 === 7 || x === 399) { rBytes.push(b); b = 0; }
+                        }
+                        await tx.writeValue(mkPacket(0x85, rBytes));
+                        await new Promise(r => setTimeout(r, 15));
+                    }
+                    await tx.writeValue(mkPacket(0x98, [0x01]));
+                    alert("Štítok vytlačený! 🖨️");
+                };
+            } catch (e) { alert("Chyba: " + e.message); }
         }
     </script>
 </body>
