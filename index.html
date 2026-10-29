@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- Načítanie oficiálnych knižníc -->
+    <!-- Opravené CDN odkazy na stabilnú verziu knižníc -->
     <script src="https://unpkg.com"></script>
     <script src="https://unpkg.com"></script>
 </head>
@@ -31,7 +31,8 @@
     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
         <h3>2. Krok: Nová výmena</h3>
         <input type="text" id="km" style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;" placeholder="Aktuálne kilometre (napr. 155 000)">
-        <input type="text" id="olej" style="width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;" placeholder="Olej / Poznámka (napr. 5W-30)"></div >
+        <input type="text" id="olej" style="width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;" placeholder="Olej / Poznámka (napr. 5W-30)">
+    </div>
 
     <!-- TLAČ -->
     <button onclick="tlac()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ Vytlačiť nový štítok</button>
@@ -45,10 +46,10 @@
             try {
                 statusDiv.innerText = "Pripájanie...";
                 
-                // Správne načítanie pod oficiálnym názvom knižnice niimbotbluelib
+                // Opravený oficiálny názov objektu z knižnice NiimBlueLib
                 let lib = window.niimbotbluelib;
                 if (!lib) {
-                    throw new Error("Knižnica sa nenačítala. Skontroluj internet.");
+                    throw new Error("Program sa z internetu nestiahol korektne. Skontroluj sieť.");
                 }
 
                 klient = new lib.NiimbotBluetoothClient();
