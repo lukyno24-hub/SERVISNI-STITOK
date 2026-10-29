@@ -3,155 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olej Asistent M2</title>
-    <!-- Stabilné a overené jadro pre čítanie QR kódov -->
-    <script src="https://jsdelivr.net"></script>
+    <title>Čistý QR Skener</title>
+    <!-- Svetovo najstabilnejšia odľahčená čítačka pre webové prehliadače -->
+    <script src="https://cloudflare.com"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
-    <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
+    <h2 style="text-align:center;color:#007bff;margin-bottom:5px;">Čistý QR Skener</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 9.1.0 (PAMÄŤOVÝ FIX)
+        Verzia: 1.0 (ČISTÝ SKENER - 1. ČASŤ)
     </div>
 
-    <!-- 1. BLUETOOTH -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <button onclick="pripojit()" style="width:100%;padding:14px;background:#fd7e14;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;">🔌 Pripojiť Niimbot M2</button>
-        <div id="status" style="font-weight:bold;text-align:center;margin-top:10px;color:#666;">Stav: Odpojená</div>
-    </div>
-
-    <!-- 2. FOTO SKENER -->
-    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <label for="foto-input" style="display:block;width:100%;padding:14px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;text-align:center;cursor:pointer;box-sizing:border-box;">
-            📷 Odfotiť starý štítok
-        </label>
-        <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none;" onchange="spracovatFoto(this)">
+        <!-- Tlačidlo, ktoré priamo prebudí fotoaparát tvojho Blackview -->
+        <button onclick="zapnutSkener()" style="width:100%;padding:14px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Zapnúť fotoaparát</button>
         
-        <div id="kamera-status" style="color:#fd7e14;font-weight:bold;text-align:center;margin-top:10px;font-size:14px;"></div>
-        <textarea id="historia" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;font-family:monospace;" placeholder="Sem sa vypíše text z QR kódu..."></textarea>
+        <div id="status" style="color:#666;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;">Stav: Kamera vypnutá</div>
+        
+        <!-- Overené okno pre reálny prenos obrazu z tvojej kamery -->
+        <video id="preview" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
+        
+        <!-- Veľké textové políčko, kde uvidíš výsledok -->
+        <label style="display:block;font-weight:bold;margin-top:15px;margin-bottom:5px;font-size:14px;">Výsledný text z QR kódu:</label>
+        <textarea id="vysledok" rows="6" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:15px;background:#e9ecef;" readonly placeholder="Po úspešnom naskenovaní sa tu hneď objaví text..."></textarea>
     </div>
-
-    <!-- 3. FORMULÁR A TLAČ -->
-    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <input type="text" id="km" style="width:100%;padding:11px;margin-bottom:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Aktuálne KM">
-        <input type="text" id="olej" style="width:100%;padding:11px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Olej / Poznámka">
-    </div>
-
-    <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;cursor:pointer;">🖨️ Vytlačiť štítok</button>
+    <!-- Načítanie celosvetovo najpoužívanejšieho dekodéru QR kódov -->
+    <script src="https://jsdelivr.net"></script>
 
     <script>
-        let tx = null, rx = null;
-        const uuids = ["0000fee7-0000-1000-8000-00805f9b34fb","0000e7fe-0000-1000-8000-00805f9b34fb","0000ff00-0000-1000-8000-00805f9b34fb","0000ff10-0000-1000-8000-00805f9b34fb"];
+        let skenerObjekt = null;
 
-        function mkPacket(cmd, data = []) {
-            let p = [0x55, 0x55, cmd, data.length, ...data];
-            let cs = cmd ^ data.length; for(let d of data) cs ^= d;
-            p.push(cs, 0xaa, 0xaa); return new Uint8Array(p);
-        }
-
-        async function pripojit() {
-            const st = document.getElementById('status'); st.innerText = "Vyhľadávanie...";
-            try {
-                if (!navigator.bluetooth) throw new Error("Bluetooth nie je povolený.");
-                const dev = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { namePrefix: 'JC' }], optionalServices: uuids
-                });
-                st.innerText = "Pripájanie ku GATT..."; const srv = await dev.gatt.connect(); let svc = null;
-                for (let u of uuids) { try { svc = await srv.getPrimaryService(u); if (svc) break; } catch(e){} }
-                if (!svc) throw new Error("Služba nenájdená.");
-                const chs = await svc.getCharacteristics();
-                for (let c of chs) {
-                    if (c.properties.write || c.properties.writeWithoutResponse) tx = c;
-                    if (c.properties.notify || c.properties.indicate) rx = c;
-                }
-                if (!tx) throw new Error("Zápisový kanál nenájdený.");
-                st.innerText = "Tlačiareň prepojená! ✅"; st.style.color = "#28a745";
-            } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
-        }
-
-        // BEZPEČNÉČÍTANIE PRE BLACKVIEW BEZ ZAMRZNUTIA PREHLIADAČA
-        function spracovatFoto(input) {
-            const statusDiv = document.getElementById('kamera-status');
-            if (!input.files || input.files.length === 0) return;
+        function zapnutSkener() {
+            const statusDiv = document.getElementById('status');
+            const videoOkno = document.getElementById('preview');
+            const vysledokText = document.getElementById('vysledok');
             
-            statusDiv.innerText = "🔍 Spracovávam snímku hardvérovo...";
+            statusDiv.innerText = "Zapínam fotoaparát a žiadam o povolenie...";
             statusDiv.style.color = "#fd7e14";
+            videoOkno.style.display = "block";
+            vysledokText.value = ""; // Vyčistiť starý text
 
-            const file = input.files[0];
-            const reader = new FileReader();
+            // Ak už nejaký skener bežal na pozadí, bezpečne ho vypneme
+            if (skenerObjekt) {
+                try { skenerObjekt.stop(); } catch(e) {}
+            }
 
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
+            // Inicializácia čistého skeneru naviazaného na naše okno
+            skenerObjekt = new Html5Qrcode("preview");
+
+            // Konfigurácia pre skenovanie: 10 snímok za sekundu, stredový zameriavací štvorec
+            const nastavenie = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            // Vynútenie spustenia zadného (hlavného) objektívu na Blackview
+            skenerObjekt.start(
+                { facingMode: "environment" },
+                nastavenie,
+                (textKodu) => {
+                    // KROK PRI ÚSPECHU: Kód bol zachytený a rozlúštený procesorom
+                    vysledokText.value = textKodu;
+                    statusDiv.innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ!";
+                    statusDiv.style.color = "#28a745";
                     
-                    // Zlatá stredná cesta pre zachovanie ostrosti bez preťaženia pamäte tvojho mobilu
-                    const OPTIMALNA_SIRKA = 1000;
-                    let w = img.width;
-                    let h = img.height;
-                    h *= OPTIMALNA_SIRKA / w;
-                    w = OPTIMALNA_SIRKA;
-
-                    canvas.width = w; canvas.height = h;
-                    ctx.drawImage(img, 0, 0, w, h);
-
-                    const imgData = ctx.getImageData(0, 0, w, h);
-                    
-                    // Dekódovanie upravenej, odľahčenej snímky
-                    const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
-
-                    if (code && code.data.trim() !== "") {
-                        document.getElementById('historia').value = code.data;
-                        statusDiv.innerText = "✅ KÓD ÚSPEŠNE ROZLÚŠTENÝ!";
-                        statusDiv.style.color = "#28a745";
-                    } else {
-                        statusDiv.innerText = "❌ QR kód sa v tejto fotke nenašiel. Skús odfotiť o niečo viac zblízka a uisti sa, že fotoaparát pred odfotením zaostril na kód.";
-                        statusDiv.style.color = "#dc3545";
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function tlac() {
-            if (!tx) { alert("Pripojte tlačiareň!"); return; }
-            let h = document.getElementById('historia').value.trim();
-            let k = document.getElementById('km').value.trim();
-            let o = document.getElementById('olej').value.trim(); if(!k) { alert("Zadajte KM!"); return; }
-            let d = new Date(), dt = d.getDate() + "." + (d.getMonth()+1) + "." + d.getFullYear();
-            let num = (h.match(/VÝMENA/g) || []).length + 1;
-            let line = num + ". VÝMENA: " + dt + " | " + k; if(o) line += " (" + o + ")";
-            let qrt = h ? h + "\n" + line : line;
-            try {
-                await tx.writeValue(mkPacket(0xbc, [0x01])); await new Promise(r => setTimeout(r, 80));
-                const cvs = document.createElement('canvas'); cvs.width = 400; cvs.height = 240; const ctx = cvs.getContext('2d');
-                ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240); ctx.fillStyle = "black";
-                ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
-                ctx.font = "bold 17px Arial"; ctx.fillText("Dátum: " + dt, 10, 80);
-                ctx.font = "bold 17px Arial"; ctx.fillText("KM: " + k, 10, 115);
-                if(o) { ctx.font = "15px Arial"; ctx.fillText(o, 10, 150); }
-                ctx.font = "italic 11px Arial"; ctx.fillText("História servisu ->", 10, 215);
-                const qri = new Image(); qri.crossOrigin = "anonymous";
-                qri.src = "https://qrserver.com" + encodeURIComponent(qrt);
-                qri.onload = async function() {
-                    ctx.drawImage(qri, 240, 45, 145, 145); const idat = ctx.getImageData(0, 0, 400, 240);
-                    for (let y = 0; y < 240; y++) {
-                        let rBytes = [], b = 0;
-                        for (let x = 0; x < 400; x++) {
-                            const idx = (y * 400 + x) * 4; const jas = (idat.data[idx] + idat.data[idx+1] + idat.data[idx+2]) / 3;
-                            if (jas < 128) b |= (1 << (7 - (x % 8)));
-                            if (x % 8 === 7 || x === 399) { rBytes.push(b); b = 0; }
-                        }
-                        await tx.writeValue(mkPacket(0x85, rBytes)); await new Promise(r => setTimeout(r, 15));
-                    }
-                    await tx.writeValue(mkPacket(0x98, [0x01])); alert("Štítok vytlačený! 🖨️");
-                };
-            } catch (e) { alert("Chyba: " + e.message); }
+                    // Automatické vypnutie kamery po úspechu, aby nežrala batériu
+                    skenerObjekt.stop().then(() => {
+                        videoOkno.style.display = "none";
+                    });
+                },
+                (chybaHladania) => {
+                    // Tichá ignorácia – prehliadač len oznamuje, že na danom snímku kód ešte nenašiel
+                }
+            ).then(() => {
+                statusDiv.innerText = "📷 Skener beží! Zamier na akýkoľvek QR kód.";
+                statusDiv.style.color = "#007bff";
+            }).catch((hardverovaChyba) => {
+                // KROK PRI HARDVÉROVEJ CHYBE: Ak telefón prístup zablokoval
+                videoOkno.style.display = "none";
+                statusDiv.innerText = "Chyba: " + hardverovaChyba + ". Skontroluj, či si v anonymnom okne povolil kameru.";
+                statusDiv.style.color = "red";
+                console.error(hardverovaChyba);
+            });
         }
     </script>
 </body>
 </html>
-
-
