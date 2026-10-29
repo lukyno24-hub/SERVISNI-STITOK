@@ -9,49 +9,32 @@
 
     <h2 style="color:#007bff;">Čistý QR Skener</h2>
     <div style="font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 2.0 (GOOGLE NATÍVNY REŽIM)
+        Verzia: 2.1 (GOOGLE LENS BYPASS)
     </div>
 
     <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-        <!-- Tlačidlo, ktoré donúti Android otvoriť jeho vlastný skener kódov -->
-        <button onclick="spustitGoogleSkener()" style="width:100%;padding:16px;background:#007bff;color:white;border:none;border-radius:5px;font-size:18px;font-weight:bold;cursor:pointer;">📷 Skenovať QR kód</button>
+        <!-- Upravené tlačidlo, ktoré naštartuje Google Lens na tvojom Blackview -->
+        <button onclick="spustitGoogleLens()" style="width:100%;padding:16px;background:#007bff;color:white;border:none;border-radius:5px;font-size:18px;font-weight:bold;cursor:pointer;">📷 Otvoriť Google Lens skener</button>
         
         <div id="status" style="margin-top:15px;font-weight:bold;color:#666;">Stav: Čakám na stlačenie...</div>
-        
-        <label style="display:block;font-weight:bold;margin-top:20px;margin-bottom:5px;text-align:left;">Naskenovaný text:</label>
-        <textarea id="vysledok" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:16px;background:#e9ecef;" readonly></textarea>
     </div>
 
     <script>
-        function spustitGoogleSkener() {
+        function spustitGoogleLens() {
             const status = document.getElementById('status');
-            status.innerText = "Otváram systémový skener telefónu...";
+            status.innerText = "Spúšťam Google Lens skener...";
             status.style.color = "#fd7e14";
 
-            // Použijeme oficiálnu Google intent schému, ktorá povie Androidu, aby okamžite zapol svoj vlastný zaostrený skener kódov
-            const skenerUrl = "intent://scan/#Intent;scheme=zxing;package=com.google.zxing.client.android;S.zxing_developer_id=html5-qrcode;end";
+            // Nová oficiálna schéma, ktorú Android 14+ bezpečne preloží a zapne Lens
+            const googleLensIntent = "intent://scan/#Intent;scheme=googlelens;package=com.google.android.googlequicksearchbox;action=com.google.lens.pure.ACTION_LENS_PURE;end";
             
-            // Otvoríme systémovú aplikáciu
-            window.location.href = skenerUrl;
+            window.location.href = googleLensIntent;
             
-            // Nastavíme kontrolu pre prípad, že by telefón skener nemal nainštalovaný
             setTimeout(() => {
-                status.innerText = "Ak sa skener neotvoril, stiahni si z Obchodu Play 'Google Lens' alebo 'Zxing QR Barcode Scanner'.";
+                status.innerText = "Ak sa skener neotvoril, skontroluj, či nemáš Google Lens v systéme zakázaný.";
                 status.style.color = "red";
-            }, 2500);
+            }, 3000);
         }
-
-        // Tento skript zachytí text, ktorý systémový skener po prečítaní vráti naspäť na našu stránku
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const vysledokText = urlParams.get('scan_result') || urlParams.get('id');
-            
-            if (vysledokText) {
-                document.getElementById('vysledok').value = decodeURIComponent(vysledokText);
-                document.getElementById('status').innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ SYSTÉMOM!";
-                document.getElementById('status').style.color = "#28a745";
-            }
-        });
     </script>
 </body>
 </html>
