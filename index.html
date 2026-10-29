@@ -3,19 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skener cez Klávesnicu</title>
+    <title>Čistý QR Skener</title>
+    <!-- Odľahčený dekódovací čip jsQR -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;text-align:center;">
 
-    <h2 style="color:#28a745;">Test Skeneru cez Klávesnicu</h2>
-    <p style="font-size:14px;color:#555;margin-bottom:20px;">Ak webstránka nemôže zapnúť foťák, zapneme ho priamo cez tvoju Google klávesnicu.</p>
-
-    <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:left;">
-        <label style="display:block;font-weight:bold;margin-bottom:10px;">Klikni do tohto políčka:</label>
-        
-        <!-- Obyčajné textové políčko, do ktorého ti klávesnica vpíše kód -->
-        <input type="text" id="vysledok" style="width:100%;padding:14px;box-sizing:border-box;border:2px solid #007bff;border-radius:5px;font-size:16px;" placeholder="Klikni sem, aby sa otvorila klávesnica...">
+    <h2>Čistý QR Skener</h2>
+    <div style="font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
+        Verzia: 1.0 (ZAMERANÉ NA ČÍTANIE)
     </div>
 
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <!-- Tlačidlo, ktoré overene prebudí kameru -->
+        <button onclick="skenovat()" style="width:100%;padding:14px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:10px;">📷 Zapnúť fotoaparát</button>
+        
+        <div id="kamera-status" style="color:#007bff;font-weight:bold;margin-bottom:10px;font-size:14px;">Stav: Kamera vypnutá</div>
+        
+        <!-- Video okno pre zobrazenie obrazu -->
+        <video id="video" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
+        
+        <!-- Skryté plátno na pozadí, z ktorého teraz správne čítame pixely -->
+        <canvas id="qr-canvas" style="display:none;"></canvas>
+        
+        <label style="display:block;font-weight:bold;margin-top:15px;margin-bottom:5px;text-align:left;">Výsledok z QR kódu:</label>
+        <textarea id="vysledok" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:15px;background:#e9ecef;" readonly></textarea>
+    </div>
+
+    <script>
+        let streamObj = null;
+        let scanInterval = null;
+
+        async function skenovat() {
+            const statusDiv = document.getElementById('kamera-status');
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('qr-canvas');
+            const ctx = canvas.getContext('2d');
+            const vysledokBox = document.getElementById('vysledok');
+            
+            statusDiv.innerText = "Spúšťam fotoaparát...";
+            statusDiv.style.color = "#fd7e14";
+            vysledokBox.value = "";
+            
+            try {
+                // Ak niečo bežalo, najprv to vypneme
+                if (streamObj) { streamObj.getTracks().forEach(t => t.stop()); clearInterval(scanInterval); }
+
+                // TVOJ OVERENÝ PRÍKAZ, KTORÝM SME KAMERU VŽDY PREBUDILI
+                streamObj = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+
+                video.srcObject = streamObj;
+                video.style.display = "block";
+                statusDiv.innerText = "📷 Kamera beží. Zamier na QR kód...";
+                statusDiv.style.color = "#007bff";
+
+                // Opravená slučka na analýzu obrazu na pozadí
+                scanInterval = setInterval(() => {
+                    if (video.readyState === video.HAVE_CURRENT_DATA) {
+                        // Nastavíme plátno presne podľa veľkosti idúceho videa
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        
+                        // Nakreslíme aktuálne políčko z videa na plátno
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        // OPRAVENÁ RIADOK: Pixely ťaháme zo správneho plátna (canvas), nie z kontextu (ctx)
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        
+                        // Posielame čisté pixely dekodéru jsQR
+                        const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+                        
+                        if (code && code.data.trim() !== "") {
+                            // Úspech – zapíšeme výsledok na displej
+                            vysledokBox.value = code.data;
+                            statusDiv.innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ!";
+                            statusDiv.style.color = "#28a745";
+                            
+                            // Automaticky vypneme video kanál
+                            clearInterval(scanInterval);
+                            streamObj.getTracks().forEach(t => t.stop());
+                            video.style.display = "none";
+                        }
+                    }
+                }, 300); // Kontrola obrazu prebieha každých 300 milisekúnd
+
+            } catch (err) {
+                video.style.display = "none";
+                statusDiv.innerText = "Chyba kamery: " + err.message;
+                statusDiv.style.color = "red";
+            }
+        }
+    </script>
 </body>
 </html>
