@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olej Asistent M2</title>
-    <!-- Použijeme stabilný skener priamo zo spoľahlivého servera -->
     <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 4.0.4 (OPRAVENÁ KAMERA)
+        Verzia: 4.0.5 (OPRAVENÝ SKRIPT)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -23,10 +22,9 @@
     <!-- 2. SKENER -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
         <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;margin-bottom:10px;">📷 Naskenovať starý štítok</button>
-        <!-- Riadok pre zobrazenie chýb kamery -->
         <div id="kamera-chyba" style="color:red;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;"></div>
         <div id="reader" style="display:none;width:100%;margin:auto;border:1px solid #ccc;background:#000;"></div>
-        <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;" placeholder="Stará história..."></textarea>
+        <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;" placeholder="Stará história výmen..."></textarea>
     </div>
 
     <!-- 3. FORMULÁR -->
@@ -84,41 +82,28 @@
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
-        // Vylepšená funkcia skenovania s odchytávaním chýb
         function skenovat() {
             const chybaDiv = document.getElementById('kamera-chyba');
             const readerDiv = document.getElementById('reader');
-            chybaDiv.innerText = ""; // Vyčistenie starej chyby
+            chybaDiv.innerText = ""; 
             readerDiv.style.display = 'block';
 
-            // Ak už skener existuje, najprv ho zrušíme, aby sa "nezasekol"
-            if (skn) {
-                try { skn.stop(); } catch(e) {}
-            }
+            if (skn) { try { skn.stop(); } catch(e) {} }
 
             skn = new Html5Qrcode("reader");
-            
-            // Konfigurácia pre mobilné telefóny – vynútenie zadnej kamery
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
             skn.start(
                 { facingMode: "environment" }, 
                 config, 
                 (text) => {
-                    // Úspešné naskenovanie
                     document.getElementById('historia').value = text;
-                    skn.stop().then(() => {
-                        readerDiv.style.style.display = 'none';
-                    });
+                    skn.stop().then(() => { readerDiv.style.display = 'none'; });
                 }, 
-                (error) => {
-                    // Tichá ignorácia priebežného hľadania kódu v obraze
-                }
+                (error) => {}
             ).catch(err => {
-                // Skutočná hardvérová chyba (napr. nepovolená kamera)
                 readerDiv.style.display = 'none';
-                chybaDiv.innerText = "Chyba kamery: " + err + ". Skontroluj, či si webstránke povolil prístup k fotoaparátu.";
-                console.error(err);
+                chybaDiv.innerText = "Chyba kamery: " + err + ". Skontroluj povolenie k fotoaparátu.";
             });
         }
 
@@ -127,9 +112,9 @@
             let h = document.getElementById('historia').value.trim();
             let k = document.getElementById('km').value.trim();
             let o = document.getElementById('olej').value.trim();
-            if(!k) { alert("Zajdete KM!"); return; }
+            if(!k) { alert("Zadajte KM!"); return; }
 
-            let d = new Date(), dt = d.getDate() + "." + (dnes.getMonth()+1) + "." + d.getFullYear();
+            let d = new Date(), dt = d.getDate() + "." + (d.getMonth()+1) + "." + d.getFullYear();
             let num = (h.match(/VÝMENA/g) || []).length + 1;
             let line = num + ". VÝMENA: " + dt + " | " + k; if(o) line += " (" + o + ")";
             let qrt = h ? h + "\n" + line : line;
