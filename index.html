@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2 - Priama Tlač</title>
-    <!-- Knižnice pre QR skenovanie a komunikáciu s Niimbot -->
+    <!-- Opravené a stabilné knižnice pre QR skenovanie a komunikáciu s Niimbot -->
     <script src="https://unpkg.com"></script>
-    <script src="https://unpkg.com"></script>
+    <script src="https://jsdelivr.net"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
         h2 { text-align: center; color: #28a745; }
@@ -60,6 +60,11 @@
         async function pripojitTlaciaren() {
             try {
                 document.getElementById('status-tlaciarne').innerText = "Pripájanie...";
+                
+                // Overenie, či sa knižnica správne načítala pod globálnym názvom
+                if (typeof niimbluelib === 'undefined') {
+                    throw new Error("Knižnica NiimBlue sa nenačítala zo servera. Skontroluj pripojenie k internetu.");
+                }
                 
                 // Inicializácia klienta z knižnice niimbluelib
                 niimbotClient = new niimbluelib.NiimbotBluetoothClient();
@@ -142,7 +147,6 @@
                 ctx.fillText("Naskenuj pre históriu ->", 10, 200);
 
                 // Tu vygenerujeme QR kód priamo pomocou NiimBlue protokolu
-                // Do jedného rohu štítku umiestnime QR kód, ktorý nesie komplet celú históriu
                 await niimbotClient.drawQrCode({
                     x: 240,
                     y: 50,
