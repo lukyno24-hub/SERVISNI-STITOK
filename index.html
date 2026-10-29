@@ -4,15 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- Použijeme stabilnú odľahčenú verziu skeneru -->
     <script src="https://cloudflare.com"></script>
 </head>
 <body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333;">
 
     <h2 style="text-align: center; color: #28a745; margin-bottom: 5px;">Olejový Asistent M2</h2>
-    <!-- TOTO ČÍSLO TI POVIE, ČI MÁŠ NOVÝ KÓD -->
     <div style="text-align: center; font-weight: bold; color: #dc3545; margin-bottom: 20px; font-size: 14px;">
-        Verzia programu: 1.0.5
+        Verzia programu: 1.0.6
     </div>
 
     <!-- PRIPOJENIE -->
@@ -45,10 +43,6 @@
         let txChar = null;
         let skener = null;
 
-        const SERVICE_UUID = "0000fee7-0000-1000-8000-00805f9b34fb";
-        const NOTIFY_CHAR_UUID = "000036e2-0000-1000-8000-00805f9b34fb";
-        const WRITE_CHAR_UUID = "000036e1-0000-1000-8000-00805f9b34fb";
-
         async function pripojitTlaciaren() {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = "Pripájanie...";
@@ -57,22 +51,57 @@
                     throw new Error("Bluetooth nie je v prehliadači podporovaný alebo povolený.");
                 }
 
+                // Odstránený prísny UUID filter, hľadáme akékoľvek M2/Niimbot zariadenie
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { services: [SERVICE_UUID] }],
-                    optionalServices: [SERVICE_UUID]
+                    filters: [
+                        { namePrefix: 'M2' },
+                        { namePrefix: 'NIIMBOT' }
+                    ],
+                    optionalServices: [
+                        "0000fee7-0000-1000-8000-00805f9b34fb",
+                        "0000e7fe-0000-1000-8000-00805f9b34fb" // Alternatívne UUID pre M2 modely
+                    ]
                 });
 
+                statusDiv.innerText = "Pripájanie k systému GATT...";
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
                 
-                txChar = await service.getCharacteristic(WRITE_CHAR_UUID);
-                rxChar = await service.getCharacteristic(NOTIFY_CHAR_UUID);
-                await rxChar.startNotifications();
+                statusDiv.innerText = "Hľadanie komunikačnej služby...";
+                // Načítame zoznam všetkých dostupných služieb v tlačiarni
+                const services = await server.getPrimaryServices();
+                if (services.length === 0) {
+                    throw new Error("Tlačiareň neposkytuje žiadne komunikačné služby.");
+                }
+                
+                // Použijeme prvú nájdenú službu hardvéru
+                const service = services[0];
+                
+                statusDiv.innerText = "Načítavanie kanálov...";
+                const characteristics = await service.getCharacteristics();
+                
+                // Automaticky rozdelíme zápisový (WRITE) a oznamovací (NOTIFY/INDICATE) kanál
+                for (let c of characteristics) {
+                    if (c.properties.write || c.properties.writeWithoutResponse) {
+                        txChar = c;
+                    }
+                    if (c.properties.notify || c.properties.indicate) {
+                        rxChar = c;
+                    }
+                }
 
+                if (!txChar) {
+                    throw new Error("Nepodarilo sa nájsť zápisový kanál pre tlač.");
+                }
+
+                if (rxChar) {
+                    await rxChar.startNotifications().catch(e => console.log("Notify nepodporované, pokračujem..."));
+                }
+
+                // Odoslanie štartovacieho príkazu
                 const startPacket = new Uint8Array([0x55, 0x55, 0x01, 0x01, 0x00, 0x00, 0x02]);
                 await txChar.writeValue(startPacket);
 
-                statusDiv.innerText = "Tlačiareň prepojená úspešne! ✅";
+                statusDiv.innerText = "Tlačiareň M2 prepojená úspešne! ✅";
                 statusDiv.style.color = "#28a745";
             } catch (e) {
                 statusDiv.innerText = "Chyba: " + e.message;
