@@ -3,158 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olejový Asistent M2 - ALL IN ONE</title>
-    <!-- Overený skener čiarových a QR kódov -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- Originálne jadro NiimBlue pre bezchybné Bluetooth spojenie s M2 -->
-    <script src="https://jsdelivr.net"></script>
+    <title>Olej Asistent M2</title>
+    <script src="https://cloudflare.com"></script>
 </head>
-<body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; max-width: 500px; margin: 20px auto;">
+<body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
-    <h2 style="text-align: center; color: #28a745; margin-bottom: 5px;">Olejový Asistent M2</h2>
-    <div style="text-align: center; font-weight: bold; color: #dc3545; margin-bottom: 20px; font-size: 14px;">
-        Verzia programu: 3.0.0 (ALL-IN-ONE)
+    <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
+    <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
+        Verzia: 4.0.2 (KOMPLETNÝ SÚBOR)
     </div>
 
-    <!-- PANELE: PRIPOJENIE -->
-    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
-        <h3 style="margin-top:0;">1. Pripojenie hardvéru</h3>
-        <button onclick="pripojitCezNiimBlue()" style="width: 100%; padding: 14px; background: #fd7e14; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;">🔌 Pripojiť Niimbot M2</button>
-        <div id="status" style="font-weight: bold; text-align: center; margin: 12px 0 0 0; color: #666; font-size: 15px;">Stav: Tlačiareň odpojená</div>
+    <!-- 1. BLUETOOTH -->
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
+        <button onclick="pripojit()" style="width:100%;padding:14px;background:#fd7e14;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;">🔌 Pripojiť Niimbot M2</button>
+        <div id="status" style="font-weight:bold;text-align:center;margin-top:10px;color:#666;">Stav: Odpojená</div>
     </div>
 
-    <!-- PANELE: SKENOVANIE -->
-    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
-        <h3 style="margin-top:0;">2. Načítanie histórie z auta</h3>
-        <button onclick="spustitKameru()" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px;">📷 Naskenovať starý štítok</button>
-        <div id="reader" style="display:none; width: 100%; budget: max-width: 400px; margin: auto; border: 1px solid #ccc;"></div>
-        <textarea id="historia" rows="4" style="width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; font-family: monospace;" placeholder="Sem sa automaticky načíta história predchádzajúcich výmen po nasmerovaní kamery..."></textarea>
+    <!-- 2. SKENER -->
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
+        <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;margin-bottom:10px;">📷 Naskenovať starý štítok</button>
+        <div id="reader" style="display:none;width:100%;margin:auto;border:1px solid #ccc;"></div>
+        <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Stará história..."></textarea>
     </div>
 
-    <!-- PANELE: ÚDAJE -->
-    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
-        <h3 style="margin-top:0;">3. Nové údaje pre štítok</h3>
-        <label style="font-weight:bold; font-size:14px;">Aktuálny stav kilometrov:</label>
-        <input type="text" id="km" style="width: 100%; padding: 11px; margin-top: 5px; margin-bottom: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 15px;" placeholder="napr. 155 200 km">
-        
-        <label style="font-weight:bold; font-size:14px;">Viskozita oleja / Poznámka:</label>
-        <input type="text" id="olej" style="width: 100%; padding: 11px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 15px;" placeholder="napr. 5W-30 Castrol + filtre">
+    <!-- 3. FORMULÁR -->
+    <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
+        <input type="text" id="km" style="width:100%;padding:11px;margin-bottom:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Aktuálne KM (napr. 155 200)">
+        <input type="text" id="olej" style="width:100%;padding:11px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;" placeholder="Olej / Poznámka (napr. 5W-30)">
     </div>
 
-    <!-- TLAČIDLO TLAČE -->
-    <button onclick="tlacitStitokCezNiimBlue()" style="width: 100%; padding: 16px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 19px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">🖨️ Vytlačiť aktualizovaný štítok</button>
+    <!-- 4. TLAČ -->
+    <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;">🖨️ Vytlačiť nový štítok</button>
 
     <script>
-        let niimClient = null;
-        let html5QrcodeScanner = null;
+        let tx = null, rx = null, skn = null;
+        const uuids = ["0000fee7-0000-1000-8000-00805f9b34fb","0000e7fe-0000-1000-8000-00805f9b34fb"];
 
-        // Spojenie s tlačiarňou cez originálne dešifrované jadro NiimBlue
-        async function pripojitCezNiimBlue() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "Vyhľadávanie hardvéru...";
-            try {
-                if (typeof niimbluelib === 'undefined') {
-                    throw new Error("Prehliadač nedokázal inicializovať NiimBlue knižnicu.");
-                }
-
-                // Vytvorenie oficiálneho klienta z knižnice, ktorý komunikuje s M2 protokolom
-                niimClient = new niimbluelib.NiimbotBluetoothClient();
-                
-                // Spustenie párovania
-                await niimClient.connect();
-
-                statusDiv.innerText = "Niimbot M2 prepojená úspešne! ✅";
-                statusDiv.style.color = "#28a745";
-            } catch (e) {
-                statusDiv.innerText = "Chyba prepojenia: " + e.message;
-                statusDiv.style.color = "#dc3545";
-                console.error(e);
-            }
+        function mkPacket(cmd, data = []) {
+            let p = [0x55, 0x55, cmd, data.length, ...data];
+            let cs = cmd ^ data.length;
+            for(let d of data) cs ^= d;
+            p.push(cs, 0xaa, 0xaa);
+            return new Uint8Array(p);
         }
 
-        // Kamera pre skenovanie histórie
-        function spustitKameru() {
+        async function pripojit() {
+            const st = document.getElementById('status'); st.innerText = "Vyhľadávanie...";
+            try {
+                if (!navigator.bluetooth) throw new Error("Bluetooth nie je povolený v prehliadači.");
+                const dev = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }], optionalServices: uuids
+                });
+                st.innerText = "Pripájanie k GATT...";
+                const srv = await dev.gatt.connect();
+                let svc = null;
+                for (let u of uuids) { try { svc = await srv.getPrimaryService(u); if (svc) break; } catch(e){} }
+                if (!svc) throw new Error("Služba nenájdená.");
+                
+                const chs = await svc.getCharacteristics();
+                for (let c of chs) {
+                    if (c.properties.write || c.properties.writeWithoutResponse) tx = c;
+                    if (c.properties.notify || c.properties.indicate) rx = c;
+                }
+                if (!tx) throw new Error("Zápisový kanál nenájdený.");
+                if (rx) await rx.startNotifications().catch(()=>{});
+
+                await tx.writeValue(mkPacket(0x01, [0x01]));
+                await new Promise(r => setTimeout(r, 80));
+                await tx.writeValue(mkPacket(0x40, [0x01]));
+
+                st.innerText = "Tlačiareň prepojená! ✅"; st.style.color = "#28a745";
+            } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
+        }
+
+        function skenovat() {
             document.getElementById('reader').style.display = 'block';
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 12, qrbox: 250 },
-                (text) => {
-                    document.getElementById('historia').value = text;
-                    html5QrcodeScanner.stop();
-                    document.getElementById('reader').style.display = 'none';
-                },
-                () => {}
-            ).catch(err => alert("Chyba kamery: " + err));
+            skn = new Html5Qrcode("reader");
+            skn.start({ facingMode: "environment" }, { fps: 12, qrbox: 250 }, (text) => {
+                document.getElementById('historia').value = text;
+                skn.stop(); document.getElementById('reader').style.display = 'none';
+            }, () => {}).catch(err => alert("Kamera: " + err));
         }
 
-        // Priama tlač štítku pomocou NiimBlue vykresľovacieho mechanizmu
-        async function tlacitStitokCezNiimBlue() {
-            if (!niimClient || !niimClient.isConnected()) { 
-                alert("Najprv musíte pripojiť tlačiareň pomocou oranžového tlačidla!"); 
-                return; 
-            }
-            
-            let staráHistória = document.getElementById('historia').value.trim();
-            let km = document.getElementById('km').value.trim();
-            let olej = document.getElementById('olej').value.trim();
-            
-            if(!km) { alert("Prosím, zadajte aktuálne kilometre!"); return; }
+        async function tlac() {
+            if (!tx) { alert("Pripojte tlačiareň!"); return; }
+            let h = document.getElementById('historia').value.trim();
+            let k = document.getElementById('km').value.trim();
+            let o = document.getElementById('olej').value.trim();
+            if(!k) { alert("Zadajte KM!"); return; }
 
-            // Automatické formátovanie aktuálneho dátumu v servise
-            let dnes = new Date();
-            let datum = dnes.getDate() + "." + (dnes.getMonth()+1) + "." + dnes.getFullYear();
-            
-            // Výpočet poradia výmeny na základe výskytu slova VÝMENA v starom QR kóde
-            let cislo = (staráHistória.match(/VÝMENA/g) || []).length + 1;
-
-            let novyRiadok = cislo + ". VÝMENA: " + datum + " | " + km;
-            if(olej) novyRiadok += " (" + olej + ")";
-            
-            // Spojenie celej kompletnej časovej osi servisu do jedného reťazca pre QR kód
-            let kompletnyQRText = staráHistória ? staráHistória + "\n" + novyRiadok : novyRiadok;
+            let d = new Date(), dt = d.getDate() + "." + (d.getMonth()+1) + "." + d.getFullYear();
+            let num = (h.match(/VÝMENA/g) || []).length + 1;
+            let line = num + ". VÝMENA: " + dt + " | " + k; if(o) line += " (" + o + ")";
+            let qrt = h ? h + "\n" + line : line;
 
             try {
-                // Nastavenie rozmerov tlačovej úlohy pre Niimbot M2 štítok (šírka 400px x výška 240px, cca 50x30mm)
-                await niimClient.startPrintTask({ width: 400, height: 240, quantity: 1 });
+                await tx.writeValue(mkPacket(0xbc, [0x01]));
+                await new Promise(r => setTimeout(r, 80));
 
-                // Vytvorenie kresliaceho prostredia (Canvas) pre kompiláciu štítku
-                const canvas = document.createElement('canvas');
-                canvas.width = 400; canvas.height = 240;
-                const ctx = canvas.getContext('2d');
-                
-                // Biele pozadie, čierna grafika
-                ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240);
-                ctx.fillStyle = "black";
+                const cvs = document.createElement('canvas'); cvs.width = 400; cvs.height = 240;
+                const ctx = cvs.getContext('2d');
+                ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240); ctx.fillStyle = "black";
 
-                // Vykreslenie textových informácií, ktoré mechanik uvidí očami
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
-                ctx.font = "bold 17px Arial"; ctx.fillText("Dátum: " + datum, 10, 80);
-                ctx.font = "bold 17px Arial"; ctx.fillText("KM: " + km, 10, 115);
-                if(olej) { 
-                    ctx.font = "15px Arial"; 
-                    // Rozdelenie dlhého textu oleja na dva riadky ak by presahoval štítok
-                    if(olej.length > 22) {
-                        ctx.fillText(olej.substring(0, 22), 10, 150);
-                        ctx.fillText(olej.substring(22), 10, 175);
-                    } else {
-                        ctx.fillText(olej, 10, 150);
-                    }
-                }
+                ctx.font = "bold 17px Arial"; ctx.fillText("Dátum: " + dt, 10, 80);
+                ctx.font = "bold 17px Arial"; ctx.fillText("KM: " + k, 10, 115);
+                if(o) { ctx.font = "15px Arial"; ctx.fillText(o, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História servisu ->", 10, 215);
 
-                // Použitie originálneho QR kresliaceho enginu z NiimBlue, ktorý M2 bezchybne vytlačí
-                await niimClient.drawQrCode({ x: 240, y: 45, size: 145, text: kompletnyQRText });
-
-                // Odoslanie vygenerovanej matice pixelov priamo do tlačovej hlavy hardvéru
-                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                await niimClient.drawImage(imgData);
-                await niimClient.endPrintTask();
+                const qri = new Image(); qri.crossOrigin = "anonymous";
+                qri.src = "https://qrserver.com" + encodeURIComponent(qrt);
                 
-                alert("Štítok bol úspešne odoslaný. Tlačiareň tlačí! 🖨️");
-            } catch (error) {
-                alert("Chyba prenosu tlače: " + error.message);
-            }
+                qri.onload = async function() {
+                    ctx.drawImage(qri, 240, 45, 145, 145);
+                    const idat = ctx.getImageData(0, 0, 400, 240);
+                    
+                    for (let y = 0; y < 240; y++) {
+                        let rBytes = [], b = 0;
+                        for (let x = 0; x < 400; x++) {
+                            const idx = (y * 400 + x) * 4;
+                            const jas = (idat.data[idx] + idat.data[idx+1] + idat.data[idx+2]) / 3;
+                            if (jas < 128) b |= (1 << (7 - (x % 8)));
+                            if (x % 8 === 7 || x === 399) { rBytes.push(b); b = 0; }
+                        }
+                        await tx.writeValue(mkPacket(0x85, rBytes));
+                        await new Promise(r => setTimeout(r, 15));
+                    }
+                    await tx.writeValue(mkPacket(0x98, [0x01]));
+                    alert("Štítok vytlačený! 🖨️");
+                };
+            } catch (e) { alert("Chyba: " + e.message); }
         }
     </script>
 </body>
