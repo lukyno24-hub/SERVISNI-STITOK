@@ -10,7 +10,7 @@
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 4.0.2 (KOMPLETNÝ SÚBOR)
+        Verzia: 4.0.3 (KOMPLETNÝ SÚBOR)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -37,7 +37,13 @@
 
     <script>
         let tx = null, rx = null, skn = null;
-        const uuids = ["0000fee7-0000-1000-8000-00805f9b34fb","0000e7fe-0000-1000-8000-00805f9b34fb"];
+        // Rozšírený zoznam UUID služieb vrátane ff00 a e7fe pre podporu Niimbot M2/B21
+        const uuids = [
+            "0000fee7-0000-1000-8000-00805f9b34fb",
+            "0000e7fe-0000-1000-8000-00805f9b34fb",
+            "0000ff00-0000-1000-8000-00805f9b34fb",
+            "0000ff10-0000-1000-8000-00805f9b34fb"
+        ];
 
         function mkPacket(cmd, data = []) {
             let p = [0x55, 0x55, cmd, data.length, ...data];
@@ -52,13 +58,13 @@
             try {
                 if (!navigator.bluetooth) throw new Error("Bluetooth nie je povolený v prehliadači.");
                 const dev = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }], optionalServices: uuids
+                    filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { namePrefix: 'JC' }], optionalServices: uuids
                 });
                 st.innerText = "Pripájanie k GATT...";
                 const srv = await dev.gatt.connect();
                 let svc = null;
                 for (let u of uuids) { try { svc = await srv.getPrimaryService(u); if (svc) break; } catch(e){} }
-                if (!svc) throw new Error("Služba nenájdená.");
+                if (!svc) throw new Error("Služba nenájdená. Skontroluj verziu tlačiarne.");
                 
                 const chs = await svc.getCharacteristics();
                 for (let c of chs) {
@@ -90,7 +96,7 @@
             let h = document.getElementById('historia').value.trim();
             let k = document.getElementById('km').value.trim();
             let o = document.getElementById('olej').value.trim();
-            if(!k) { alert("Zadajte KM!"); return; }
+            if(!k) { alert("Zajdete KM!"); return; }
 
             let d = new Date(), dt = d.getDate() + "." + (d.getMonth()+1) + "." + d.getFullYear();
             let num = (h.match(/VÝMENA/g) || []).length + 1;
