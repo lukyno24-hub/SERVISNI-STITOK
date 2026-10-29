@@ -3,55 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Univerzálny QR Skener</title>
+    <title>Definitívny QR Skener</title>
+    <!-- Oficiálna, najstabilnejšia skenovacia knižnica od Google komunity -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;text-align:center;">
 
-    <h2 style="color:#007bff;">Čistý QR Skener</h2>
+    <h2 style="color:#28a745;margin-bottom:5px;">Čistý QR Skener</h2>
     <div style="font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 2.2 (UNIVERZÁLNY APP BYPASS)
+        Verzia: 3.0 (GOOGLE ENGINE BYPASS)
     </div>
 
-    <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-        <button onclick="spustitUniverzalnySkener()" style="width:100%;padding:16px;background:#007bff;color:white;border:none;border-radius:5px;font-size:18px;font-weight:bold;cursor:pointer;">📷 Otvoriť externý skener</button>
+    <div style="background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:left;">
+        <h3 style="margin-top:0;color:#333;text-align:center;">Skenovanie z fotografie</h3>
         
-        <div id="status" style="margin-top:15px;font-weight:bold;color:#666;">Stav: Čakám na stlačenie...</div>
+        <!-- Vstavané Google rozhranie, ktoré si telefón sám manažuje -->
+        <div id="qr-reader" style="width:100%; border:1px solid #ccc; border-radius:5px; padding:10px; box-sizing:border-box; background:#fafafa;"></div>
         
-        <label style="display:block;font-weight:bold;margin-top:20px;margin-bottom:5px;text-align:left;">Naskenovaný text:</label>
-        <textarea id="vysledok" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:16px;background:#e9ecef;" readonly></textarea>
+        <label style="display:block;font-weight:bold;margin-top:20px;margin-bottom:5px;">Výsledný text z QR kódu:</label>
+        <textarea id="vysledok" rows="5" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;font-family:monospace;font-size:16px;background:#e9ecef;" readonly placeholder="Tu sa objaví text..."></textarea>
     </div>
 
     <script>
-        function spustitUniverzalnySkener() {
-            const status = document.getElementById('status');
-            status.innerText = "Spúšťam externý skener...";
-            status.style.color = "#fd7e14";
-
-            // Získame aktuálnu adresu našej stránky, aby sa mal skener kam vrátiť s výsledkom
-            const navratovaAdresa = window.location.href.split('?')[0];
-            
-            // Štandardizovaný globálny príkaz pre voľne dostupné čítačky v Google Play
-            // Po prečítaní kódu skener automaticky skočí späť na náš web a na koniec linky prilepí výsledok
-            const univerzalnaSchema = "http://appspot.com" + encodeURIComponent(navratovaAdresa + "?text={CODE}");
-            
-            window.location.href = univerzalnaSchema;
-            
-            setTimeout(() => {
-                status.innerHTML = "Ak sa nič nestalo, uisti sa, že máš v telefóne stiahnutý akýkoľvek bežný <b>QR Barcode Scanner</b> z Obchodu Play.";
-                status.style.color = "red";
-            }, 3000);
+        function onScanSuccess(decodedText, decodedResult) {
+            // Táto funkcia sa spustí hneď, ako knižnica kód úspešne rozlúšti
+            document.getElementById('vysledok').value = decodedText;
+            alert("✅ QR KÓD ÚSÚPEŠNE ROZLÚŠTENÝ!");
         }
 
-        // Tento skript zachytí dáta, ktoré nám skener poslal po návrate späť
+        function onScanFailure(error) {
+            // Tichá ignorácia chýb počas analýzy snímky
+        }
+
+        // Spustenie celého vyhľadávacieho systému po načítaní stránky
         window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const vysledokText = urlParams.get('text');
+            // Vytvorenie integrovaného Google skeneru
+            const html5QrcodeScanner = new Html5QrcodeScanner(
+                "qr-reader", 
+                { 
+                    fps: 10, 
+                    qrbox: 250,
+                    // Tento riadok povie programu, aby vypol nefunkčné video z prehliadača a nechal ťa vybrať len čistú fotku z fotoaparátu
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_FILE]
+                },
+                /* verbose= */ false
+            );
             
-            if (vysledokText) {
-                document.getElementById('vysledok').value = decodeURIComponent(vysledokText);
-                document.getElementById('status').innerText = "✅ KÓD ÚSPEŠNE NASKENOVANÝ EXTERNOU APLIKÁCIOU!";
-                document.getElementById('status').style.color = "#28a745";
-            }
+            // Naštartovanie prostredia
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            
+            // Rýchly preklad anglických textov v Google lište do slovenčiny pre pohodlie v servise
+            setTimeout(() => {
+                const fileButton = document.getElementById('qr-reader__dashboard_section_swaplink');
+                if(fileButton) {
+                    fileButton.innerText = "Vybrať / Odfotiť štítok";
+                }
+                const labelText = document.querySelector('#qr-reader__dashboard_section_file>div');
+                if(labelText) {
+                    labelText.innerText = "Klikni sem a zvoľ 'Fotoaparát' na odfotenie kódu";
+                }
+            }, 500);
         });
     </script>
 </body>
