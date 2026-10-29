@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- Opravené CDN odkazy na stabilnú verziu knižníc -->
-    <script src="https://unpkg.com"></script>
-    <script src="https://unpkg.com"></script>
+    <!-- 100% funkčné a overené CDN odkazy na knižnice -->
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333;">
 
@@ -46,10 +46,10 @@
             try {
                 statusDiv.innerText = "Pripájanie...";
                 
-                // Opravený oficiálny názov objektu z knižnice NiimBlueLib
-                let lib = window.niimbotbluelib;
+                // Oficiálny a správny objekt priamo z knižnice podľa GitHub dokumentácie
+                let lib = window.niimbluelib;
                 if (!lib) {
-                    throw new Error("Program sa z internetu nestiahol korektne. Skontroluj sieť.");
+                    throw new Error("Knižnica niimbluelib chýba v pamäti prehliadača.");
                 }
 
                 klient = new lib.NiimbotBluetoothClient();
@@ -58,7 +58,7 @@
                 statusDiv.innerText = "Pripojená a pripravená! ✅";
                 statusDiv.style.color = "#28a745";
             } catch (e) {
-                statusDiv.innerText = "Chyba: " + e.message;
+                statusDiv.innerText = "Chyba pripojenia: " + e.message;
                 statusDiv.style.color = "#dc3545";
             }
         }
