@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- Načítame iba skener, ktorý funguje stopercentne -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- Použijeme stabilnú odľahčenú verziu skeneru -->
+    <script src="https://cloudflare.com"></script>
 </head>
 <body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333;">
 
-    <h2 style="text-align: center; color: #28a745;">Olejový Asistent M2</h2>
+    <h2 style="text-align: center; color: #28a745; margin-bottom: 5px;">Olejový Asistent M2</h2>
+    <!-- TOTO ČÍSLO TI POVIE, ČI MÁŠ NOVÝ KÓD -->
+    <div style="text-align: center; font-weight: bold; color: #dc3545; margin-bottom: 20px; font-size: 14px;">
+        Verzia programu: 1.0.5
+    </div>
 
     <!-- PRIPOJENIE -->
     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
@@ -41,7 +45,6 @@
         let txChar = null;
         let skener = null;
 
-        // Oficiálne UUID pre komunikáciu s Niimbot hardvérom
         const SERVICE_UUID = "0000fee7-0000-1000-8000-00805f9b34fb";
         const NOTIFY_CHAR_UUID = "000036e2-0000-1000-8000-00805f9b34fb";
         const WRITE_CHAR_UUID = "000036e1-0000-1000-8000-00805f9b34fb";
@@ -54,7 +57,6 @@
                     throw new Error("Bluetooth nie je v prehliadači podporovaný alebo povolený.");
                 }
 
-                // Vyhľadávanie tlačiarne M2
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'M2' }, { namePrefix: 'NIIMBOT' }, { services: [SERVICE_UUID] }],
                     optionalServices: [SERVICE_UUID]
@@ -67,7 +69,6 @@
                 rxChar = await service.getCharacteristic(NOTIFY_CHAR_UUID);
                 await rxChar.startNotifications();
 
-                // Odoslanie štartovacieho príkazu priamo v čistých bajtoch
                 const startPacket = new Uint8Array([0x55, 0x55, 0x01, 0x01, 0x00, 0x00, 0x02]);
                 await txChar.writeValue(startPacket);
 
@@ -110,21 +111,18 @@
             let kompletnyQR = staráHistória ? staráHistória + "\n" + novyRiadok : novyRiadok;
 
             try {
-                // Príprava čistého kresliaceho plátna pre štítok
                 const canvas = document.createElement('canvas');
                 canvas.width = 400; canvas.height = 240;
                 const ctx = canvas.getContext('2d');
                 ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240);
                 ctx.fillStyle = "black";
 
-                // Vykreslenie textu
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
                 ctx.font = "18px Arial"; ctx.fillText("Dátum: " + datum, 10, 80);
                 ctx.font = "18px Arial"; ctx.fillText("KM: " + km, 10, 115);
                 if(olej) { ctx.font = "16px Arial"; ctx.fillText(olej, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História ->", 15, 205);
 
-                // Načítanie QR kódu z rýchleho generátora obrázkov Google API
                 const qrImg = new Image();
                 qrImg.crossOrigin = "anonymous";
                 qrImg.src = "https://qrserver.com" + encodeURIComponent(kompletnyQR);
@@ -135,10 +133,8 @@
                     const imgData = ctx.getImageData(0, 0, 400, 240);
                     let rawBytes = [];
 
-                    // Hlavička štartu tlače
                     rawBytes.push(0x55, 0x55, 0x03, 0x01, 0x01, 0x01, 0x06);
 
-                    // Prevod nakreslených pixelov do binárnej formy pre tlačovú hlavu
                     for (let y = 0; y < 240; y++) {
                         let bajt = 0;
                         for (let x = 0; x < 400; x++) {
@@ -152,10 +148,8 @@
                         }
                     }
 
-                    // Koncový packet pre ukončenie a posun
                     rawBytes.push(0x55, 0x55, 0x04, 0x01, 0x01, 0x01, 0x07);
 
-                    // Posielanie dát po malých bezpečných 20-bajtových blokoch
                     const dataToSend = new Uint8Array(rawBytes);
                     for (let i = 0; i < dataToSend.length; i += 20) {
                         await txChar.writeValue(dataToSend.slice(i, i + 20));
