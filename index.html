@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
+    <!-- Stabilný odľahčený skener QR kódov -->
     <script src="https://cloudflare.com"></script>
 </head>
 <body style="font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333;">
 
     <h2 style="text-align: center; color: #28a745; margin-bottom: 5px;">Olejový Asistent M2</h2>
+    <!-- Kontrolné číslo verzie -->
     <div style="text-align: center; font-weight: bold; color: #dc3545; margin-bottom: 20px; font-size: 14px;">
-        Verzia programu: 1.0.6
+        Verzia programu: 1.0.8 (KOMPLETNÁ)
     </div>
 
     <!-- PRIPOJENIE -->
@@ -43,6 +45,13 @@
         let txChar = null;
         let skener = null;
 
+        // Všetky oficiálne komunikačné UUID balíky pre tlačiarne Niimbot
+        const NIIMBOT_UUIDS = [
+            "0000fee7-0000-1000-8000-00805f9b34fb", 
+            "0000e7fe-0000-1000-8000-00805f9b34fb", 
+            "0000af30-0000-1000-8000-00805f9b34fb"  
+        ];
+
         async function pripojitTlaciaren() {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = "Pripájanie...";
@@ -51,35 +60,39 @@
                     throw new Error("Bluetooth nie je v prehliadači podporovaný alebo povolený.");
                 }
 
-                // Odstránený prísny UUID filter, hľadáme akékoľvek M2/Niimbot zariadenie
+                // Otvorenie Bluetooth okna pre vyhľadanie Niimbot
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [
                         { namePrefix: 'M2' },
-                        { namePrefix: 'NIIMBOT' }
+                        { namePrefix: 'NIIMBOT' },
+                        { namePrefix: 'JC' }
                     ],
-                    optionalServices: [
-                        "0000fee7-0000-1000-8000-00805f9b34fb",
-                        "0000e7fe-0000-1000-8000-00805f9b34fb" // Alternatívne UUID pre M2 modely
-                    ]
+                    optionalServices: NIIMBOT_UUIDS
                 });
 
                 statusDiv.innerText = "Pripájanie k systému GATT...";
                 const server = await device.gatt.connect();
                 
-                statusDiv.innerText = "Hľadanie komunikačnej služby...";
-                // Načítame zoznam všetkých dostupných služieb v tlačiarni
-                const services = await server.getPrimaryServices();
-                if (services.length === 0) {
-                    throw new Error("Tlačiareň neposkytuje žiadne komunikačné služby.");
+                statusDiv.innerText = "Hľadanie kompatibilnej služby...";
+                let service = null;
+                
+                // Opravený cyklus pre korektné načítanie Bluetooth služby z hardvéru
+                for (let uuid of NIIMBOT_UUIDS) {
+                    try {
+                        service = await server.getPrimaryService(uuid);
+                        if (service) break;
+                    } catch (e) {
+                        // Ak toto UUID nefunguje, slučka skúsi ďalšie
+                    }
+                }
+
+                if (!service) {
+                    throw new Error("Tlačiareň neodpovedá na známe komunikačné kanály.");
                 }
                 
-                // Použijeme prvú nájdenú službu hardvéru
-                const service = services[0];
-                
-                statusDiv.innerText = "Načítavanie kanálov...";
+                statusDiv.innerText = "Načítavanie prenosových kanálov...";
                 const characteristics = await service.getCharacteristics();
                 
-                // Automaticky rozdelíme zápisový (WRITE) a oznamovací (NOTIFY/INDICATE) kanál
                 for (let c of characteristics) {
                     if (c.properties.write || c.properties.writeWithoutResponse) {
                         txChar = c;
@@ -90,18 +103,18 @@
                 }
 
                 if (!txChar) {
-                    throw new Error("Nepodarilo sa nájsť zápisový kanál pre tlač.");
+                    throw new Error("Nepodarilo sa vytvoriť zápisovú linku.");
                 }
 
                 if (rxChar) {
-                    await rxChar.startNotifications().catch(e => console.log("Notify nepodporované, pokračujem..."));
+                    await rxChar.startNotifications().catch(e => console.log("Notify nie je podporované"));
                 }
 
-                // Odoslanie štartovacieho príkazu
+                // Overovací paket pre prebudenie tlačiarne
                 const startPacket = new Uint8Array([0x55, 0x55, 0x01, 0x01, 0x00, 0x00, 0x02]);
                 await txChar.writeValue(startPacket);
 
-                statusDiv.innerText = "Tlačiareň M2 prepojená úspešne! ✅";
+                statusDiv.innerText = "Tlačiareň M2 úspešne spojená! ✅";
                 statusDiv.style.color = "#28a745";
             } catch (e) {
                 statusDiv.innerText = "Chyba: " + e.message;
@@ -140,18 +153,21 @@
             let kompletnyQR = staráHistória ? staráHistória + "\n" + novyRiadok : novyRiadok;
 
             try {
+                // Príprava kresliaceho plátna pre štítok Niimbot M2
                 const canvas = document.createElement('canvas');
                 canvas.width = 400; canvas.height = 240;
                 const ctx = canvas.getContext('2d');
                 ctx.fillStyle = "white"; ctx.fillRect(0, 0, 400, 240);
                 ctx.fillStyle = "black";
 
+                // Vykreslenie textu
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
                 ctx.font = "18px Arial"; ctx.fillText("Dátum: " + datum, 10, 80);
                 ctx.font = "18px Arial"; ctx.fillText("KM: " + km, 10, 115);
                 if(olej) { ctx.font = "16px Arial"; ctx.fillText(olej, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História ->", 15, 205);
 
+                // Načítanie vygenerovaného QR kódu
                 const qrImg = new Image();
                 qrImg.crossOrigin = "anonymous";
                 qrImg.src = "https://qrserver.com" + encodeURIComponent(kompletnyQR);
@@ -162,8 +178,10 @@
                     const imgData = ctx.getImageData(0, 0, 400, 240);
                     let rawBytes = [];
 
+                    // Začiatok prenosu riadkov
                     rawBytes.push(0x55, 0x55, 0x03, 0x01, 0x01, 0x01, 0x06);
 
+                    // Prevod pixelov do 1-bitovej matice pre tlačovú hlavu
                     for (let y = 0; y < 240; y++) {
                         let bajt = 0;
                         for (let x = 0; x < 400; x++) {
@@ -177,19 +195,18 @@
                         }
                     }
 
+                    // Koniec prenosu dát a odstrih
                     rawBytes.push(0x55, 0x55, 0x04, 0x01, 0x01, 0x01, 0x07);
 
-                    const dataToSend = new Uint8Array(rawBytes);
-                    for (let i = 0; i < dataToSend.length; i += 20) {
-                        await txChar.writeValue(dataToSend.slice(i, i + 20));
-                        await new Promise(r => setTimeout(r, 40));
-                    }
-                    alert("Štítok poslaný do tlače!");
-                };
-            } catch (e) {
-                alert("Chyba tlače: " + e.message);
-            }
-        }
-    </script>
-</body>
-</html>
+                    // Posielanie dát po stabilných 20-bajtových blokoch
+const dataToSend = new Uint8Array(rawBytes);
+for (let i = 0; i < dataToSend.length; i += 20) {
+await txChar.writeValue(dataToSend.slice(i, i + 20));
+await new Promise(r => setTimeout(r, 40));
+}
+alert("Štítok poslaný do tlače!");
+};
+} catch (e) {
+alert("Chyba tlače: " + e.message);
+}
+}
