@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olej Asistent M2</title>
-    <!-- Moderný a superrýchly dekóder, ktorý prečíta kód okamžite -->
-    <script src="https://rawgit.com"></script>
+    <!-- Použijeme extrémne stabilnú knižnicu iba na dekódovanie hotovej fotografie -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family:Arial,sans-serif;margin:20px;background:#f4f4f9;max-width:500px;margin:20px auto;">
 
     <h2 style="text-align:center;color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="text-align:center;font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 4.0.9 (ČÍTAČKA INSTASCAN)
+        Verzia: 5.0.0 (FOTO-SKENER V1)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -20,11 +20,15 @@
         <div id="status" style="font-weight:bold;text-align:center;margin-top:10px;color:#666;">Stav: Odpojená</div>
     </div>
 
-    <!-- 2. SKENER -->
+    <!-- 2. FOTO SKENER -->
     <div style="background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);margin-bottom:15px;">
-        <button onclick="skenovat()" style="width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;margin-bottom:10px;">📷 Naskenovať starý štítok</button>
-        <div id="kamera-status" style="color:#007bff;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;"></div>
-        <video id="preview" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
+        <!-- Tento špeciálny príkaz donúti mobil otvoriť jeho vlastnú aplikáciu Fotoaparát -->
+        <label for="foto-input" style="display:block;width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:5px;font-size:16px;font-weight:bold;text-align:center;cursor:pointer;box-sizing:border-box;">
+            📷 Odfotiť starý štítok
+        </label>
+        <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none;" onchange="spracovatFoto(this)">
+        
+        <div id="kamera-status" style="color:#28a745;font-weight:bold;text-align:center;margin-top:10px;font-size:14px;"></div>
         <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;" placeholder="Stará história výmen..."></textarea>
     </div>
 
@@ -37,7 +41,7 @@
     <!-- 4. TLAČ -->
     <button onclick="tlac()" style="width:100%;padding:16px;background:#28a745;color:white;border:none;border-radius:5px;font-size:19px;font-weight:bold;">🖨️ Vytlačiť nový štítok</button>
     <script>
-        let tx = null, rx = null, scanner = null;
+        let tx = null, rx = null;
         const uuids = [
             "0000fee7-0000-1000-8000-00805f9b34fb",
             "0000e7fe-0000-1000-8000-00805f9b34fb",
@@ -82,52 +86,55 @@
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
-        // Nová blesková funkcia skenovania pomocou Instascan
-        function skenovat() {
+        // Nová funkcia: Načíta fotografiu zo systému a prečíta z nej QR kód
+        function spracovatFoto(input) {
             const statusDiv = document.getElementById('kamera-status');
-            const video = document.getElementById('preview');
-            statusDiv.innerText = "Zapínanie inteligentného skenera...";
-            statusDiv.style.color = "#007bff";
-            video.style.display = "block";
-
-            if (scanner) { try { scanner.stop(); } catch(e){} }
-
-            // Inicializácia Instascan čítačky s prepojením na tvoje video plátno
-            scanner = new Instascan.Scanner({ video: video, mirror: false });
+            if (!input.files || !input.files[0]) return;
             
-            // Reakcia na okamžité zachytenie a dekódovanie kódu
-            scanner.addListener('scan', function (content) {
-                document.getElementById('historia').value = content;
-                statusDiv.innerText = "✅ Kód úspešne načítaný!";
-                statusDiv.style.color = "#28a745";
-                scanner.stop();
-                video.style.display = "none";
-            });
+            statusDiv.innerText = "🔍 Čítam fotografiu...";
+            statusDiv.style.color = "#fd7e14";
 
-            // Vyžiadanie zoznamu kamier a automatické vybratie zadnej (hlavnej) kamery servisu
-            Instascan.Camera.getCameras().then(function (cameras) {
-                if (cameras.length > 0) {
-                    // Ak mobil nájde viac kamier (širokouhlá, makro), použije tú poslednú, čo býva hlavná zadná
-                    let zadnaKamera = cameras[cameras.length - 1];
-                    // Na iPhonoch niekedy Instascan preferuje prvú, preto malý filter
-                    for(let c of cameras){
-                        if(c.name && (c.name.toLowerCase().includes('back') || c.name.toLowerCase().includes('rear'))){
-                            zadnaKamera = c;
-                            break;
-                        }
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Vytvoríme skryté pomocné plátno pre analýzu pixelov fotografie
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Optimalizujeme veľkosť fotografie pre bleskové prečítanie
+                    const MAX_WIDTH = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
                     }
-                    scanner.start(zadnaKamera);
-                    statusDiv.innerText = "📷 Skener aktívny. Ukáž mi QR kód...";
-                } else {
-                    video.style.display = "none";
-                    statusDiv.innerText = "Chyba: V mobile sa nenašla žiadna funkčná kamera.";
-                    statusDiv.style.color = "red";
-                }
-            }).catch(function (e) {
-                video.style.display = "none";
-                statusDiv.innerText = "Chyba prístupu ku kamere: " + e;
-                statusDiv.style.color = "red";
-            });
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const imgData = ctx.getImageData(0, 0, width, height);
+                    
+                    // Dekódovanie algoritmu cez knižnicu jsQR z odfoteného záberu
+                    const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+
+                    if (code) {
+                        document.getElementById('historia').value = code.data;
+                        statusDiv.innerText = "✅ História úspešne načítaná z fotky!";
+                        statusDiv.style.color = "#28a745";
+                    } else {
+                        statusDiv.innerText = "❌ V odfotenom zábere sa nenašiel čitateľný QR kód. Skús odfotiť detailnejšie zblízka.";
+                        statusDiv.style.color = "#dc3545";
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         async function tlac() {
@@ -182,3 +189,4 @@
     </script>
 </body>
 </html>
+
