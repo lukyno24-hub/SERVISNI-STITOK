@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Olejový Asistent M2</title>
-    <!-- Načítanie overenej a stabilnej standalone verzie knižnice priamo z UNPKG -->
+    <!-- Načítanie oficiálnych knižníc -->
     <script src="https://unpkg.com"></script>
     <script src="https://unpkg.com"></script>
 </head>
@@ -31,8 +31,7 @@
     <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
         <h3>2. Krok: Nová výmena</h3>
         <input type="text" id="km" style="width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;" placeholder="Aktuálne kilometre (napr. 155 000)">
-        <input type="text" id="olej" style="width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;" placeholder="Olej / Poznámka (napr. 5W-30)">
-    </div>
+        <input type="text" id="olej" style="width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px;" placeholder="Olej / Poznámka (napr. 5W-30)"></div >
 
     <!-- TLAČ -->
     <button onclick="tlac()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;">🖨️ Vytlačiť nový štítok</button>
@@ -46,10 +45,10 @@
             try {
                 statusDiv.innerText = "Pripájanie...";
                 
-                // Kontrola prítomnosti knižnice v systéme prehliadača
-                let lib = window.niimbluelib;
+                // Správne načítanie pod oficiálnym názvom knižnice niimbotbluelib
+                let lib = window.niimbotbluelib;
                 if (!lib) {
-                    throw new Error("Prehliadač blokuje stiahnutie programu NiimBlue z internetu.");
+                    throw new Error("Knižnica sa nenačítala. Skontroluj internet.");
                 }
 
                 klient = new lib.NiimbotBluetoothClient();
@@ -94,7 +93,6 @@
             let kompletnyQR = staráHistória ? staráHistória + "\n" + novyRiadok : novyRiadok;
 
             try {
-                // Konfigurácia pre Niimbot M2 (šírka 400px x výška 240px)
                 await klient.startPrintTask({ width: 400, height: 240, quantity: 1 });
 
                 const canvas = document.createElement('canvas');
@@ -102,14 +100,12 @@
                 const ctx = canvas.getContext('2d');
                 ctx.fillStyle = "black";
 
-                // Vykreslenie textov
                 ctx.font = "bold 22px Arial"; ctx.fillText("VÝMENA OLEJA", 10, 35);
                 ctx.font = "18px Arial"; ctx.fillText("Dátum: " + datum, 10, 80);
                 ctx.font = "18px Arial"; ctx.fillText("KM: " + km, 10, 115);
                 if(olej) { ctx.font = "16px Arial"; ctx.fillText(olej, 10, 150); }
                 ctx.font = "italic 11px Arial"; ctx.fillText("História ->", 15, 205);
 
-                // Zakódovanie kompletnej histórie do QR kódu na štítku
                 await klient.drawQrCode({ x: 240, y: 45, size: 145, text: kompletnyQR });
 
                 const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
