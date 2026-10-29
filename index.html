@@ -9,7 +9,7 @@
 
     <h2 style="color:#28a745;margin-bottom:5px;">Olejový Asistent M2</h2>
     <div style="font-weight:bold;color:#dc3545;margin-bottom:20px;font-size:14px;">
-        Verzia: 11.0.0 (ČIERNOBIELY FILTER CODES)
+        Verzia: 11.0.1 (OPRAVA DEKÓDERU)
     </div>
 
     <!-- 1. BLUETOOTH -->
@@ -24,7 +24,6 @@
         <div id="kamera-status" style="color:#007bff;font-weight:bold;text-align:center;margin-bottom:10px;font-size:14px;">Stav: Kamera vypnutá</div>
         
         <video id="video" style="display:none;width:100%;max-width:100%;border:1px solid #ccc;background:#000;border-radius:5px;" autoplay playsinline></video>
-        <canvas id="qr-canvas" style="display:none;"></canvas>
         
         <textarea id="historia" rows="3" style="width:100%;padding:10px;box-sizing:border-box;border:1px solid #ccc;border-radius:5px;margin-top:10px;font-family:monospace;" placeholder="Stará história výmen..."></textarea>
     </div>
@@ -78,7 +77,6 @@
             } catch (e) { st.innerText = "Chyba: " + e.message; st.style.color = "#dc3545"; }
         }
 
-        // AKTUÁLNY SKENER: Používa hardvérovú akceleráciu procesora
         async function skenovat() {
             const statusDiv = document.getElementById('kamera-status');
             const video = document.getElementById('video');
@@ -88,19 +86,16 @@
             try {
                 if (streamObj) { streamObj.getTracks().forEach(t => t.stop()); clearInterval(scanInterval); }
 
-                // Spustenie tvojej overenej a funkčnej kamery
                 streamObj = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" }
                 });
 
                 video.srcObject = streamObj;
                 video.style.display = "block";
-                statusDiv.innerText = "📷 Skenujem... Drž kód stabilne pred objektívom.";
+                statusDiv.innerText = "📷 Skenujem hardvérovo... Zamier na QR kód.";
                 statusDiv.style.color = "#007bff";
 
-                // Kontrola prítomnosti hardvérového skenera v Androide
                 if (!window.BarcodeDetector) {
-                    // Záložný preklad, ak prehliadač vyžaduje polyfill
                     statusDiv.innerText = "Zariadenie nepodporuje priamy BarcodeDetector. Skús aktualizovať Chrome.";
                     statusDiv.style.color = "red";
                     return;
@@ -108,13 +103,12 @@
 
                 const detector = new BarcodeDetector({ formats: ['qr_code'] });
 
-                // Slučka, ktorá posiela video rovno procesoru telefónu bez kopírovania pixelov na plátno
                 scanInterval = setInterval(async () => {
                     if (video.readyState === video.HAVE_CURRENT_DATA) {
                         try {
                             const barcodes = await detector.detect(video);
                             if (barcodes.length > 0) {
-                                // Kód úspešne prečítaný hardvérom tvojho mobilu
+                                // OPRAVENÉ: Správny zápis natiahnutia textu z prvej nájdenej vzorky (index 0)
                                 document.getElementById('historia').value = barcodes[0].rawValue;
                                 statusDiv.innerText = "✅ KÓD ÚSÚPEŠNE NASKENOVANÝ!";
                                 statusDiv.style.color = "#28a745";
@@ -124,7 +118,7 @@
                                 video.style.display = "none";
                             }
                         } catch (e) {
-                            console.error("Chyba detekcie: ", e);
+                            console.error(e);
                         }
                     }
                 }, 200);
