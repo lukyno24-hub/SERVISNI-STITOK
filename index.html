@@ -37,6 +37,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .service-extra textarea{min-height:60px}
 #scanner{display:none;margin-top:12px}.record{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
 .record strong{display:block;margin-bottom:4px}.small{font-size:12px;color:var(--muted)}
+.history-machine{font-size:14px;font-weight:bold;margin:0 0 10px;color:#344054}
 .label-preview{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
 .label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1mm;overflow-wrap:anywhere}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}
 .label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}
@@ -172,6 +173,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 
 <section class="panel">
 <h2>Servisná história z QR kódu</h2>
+<div id="historyMachine" class="history-machine">Stroj: —</div>
 <div id="historyList" class="small">Najprv naskenuj QR kód z predchádzajúceho štítku.</div>
 </section>
 
@@ -333,8 +335,10 @@ async function startScan(){
 async function stopScan(){if(activeScanner){try{await activeScanner.stop();activeScanner.clear()}catch(e){} activeScanner=null}$('scanner').style.display="none"}
 
 function renderHistory(){
- if(!records.length){$('historyList').textContent="História sa zobrazí po pridaní záznamu.";return}
- $('historyList').innerHTML=records.map((r,i)=>{const u=r.unit||"km";const ut=u==="mh"?"Mh":"km";return `<div class="record"><strong>${i+1}. ${escapeHtml(fmtDate(r.date))} · ${escapeHtml(r.current||"—")} ${ut}</strong>${escapeHtml(r.description||"")}<div class="small">Ďalší servis: ${escapeHtml(fmtDate(r.nextDate))} · ${escapeHtml(r.nextKm||"—")} ${ut}</div></div>`;}).join("");
+ const machineName=$('machine').value.trim();
+ $('historyMachine').textContent="Stroj: "+(machineName||"—");
+ if(!records.length){$('historyList').textContent="Najprv naskenuj QR kód z predchádzajúceho štítku.";return}
+ $('historyList').innerHTML=records.map((r,i)=>{const u=r.unit||"km";const ut=u==="mh"?"MTH":"KM";return `<div class="record"><strong>${i+1}. ${escapeHtml(fmtDate(r.date))} · ${escapeHtml(r.current||"—")} ${ut}</strong>${escapeHtml(r.description||"")}<div class="small">Ďalší servis: ${escapeHtml(fmtDate(r.nextDate))} · ${escapeHtml(r.nextKm||"—")} ${ut}</div></div>`;}).join("");
 }
 function clearForm(){
  $('date').value=today();
@@ -370,7 +374,7 @@ function updateUnitLabels(){
  $('nextKm').placeholder=isMh?"napr. 3920":"napr. 170200";
 }
 document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',()=>{updateUnitLabels();render()}));
-$('machine').addEventListener('input',()=>{if(records.length)render()});
+$('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
 // Náhľad štítku sa aktualizuje okamžite pri každom výbere alebo zmene servisnej položky.
 document.querySelectorAll('input[name="servicePart"],#oilType,#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
  el.addEventListener('input',render);
