@@ -217,7 +217,12 @@ function render(){
  if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
  if(isDraft) qrPayload.records=[...records,shown];
- new QRCode($('qrcode'),{text:JSON.stringify(qrPayload),width:115,height:115,correctLevel:QRCode.CorrectLevel.M});
+ try{
+  // Úroveň L umožní uložiť viac servisných údajov do jedného QR kódu.
+  new QRCode($('qrcode'),{text:JSON.stringify(qrPayload),width:115,height:115,correctLevel:QRCode.CorrectLevel.L});
+ }catch(err){
+  $('qrcode').textContent="História je už príliš dlhá pre jeden QR kód. Záznamy zostali zachované.";
+ }
 }
 function buildServiceDescription(){
  const selected=[...document.querySelectorAll('input[name="servicePart"]:checked')];
@@ -288,8 +293,13 @@ function renderHistory(){
 function clearForm(){$('date').value=today();$('current').value="";$('description').value="";$('nextDate').value="";$('nextKm').value="";$('appStatus').textContent="Formulár vyčistený. Predchádzajúca história zostáva."; }
 function clearSaved(){if(confirm("Naozaj vymazať uloženú servisnú históriu z tohto zariadenia?")){records=[];localStorage.removeItem("servisnyAsistent.records");render();renderHistory();$('appStatus').textContent="História vymazaná.";}}
 function openPreview(){
- render();
+ // Otvoriť okno najprv, aby prípadná chyba QR kódu nezablokovala náhľad.
  $('previewModal').classList.add('open');
+ try{
+  render();
+ }catch(err){
+  $('appStatus').textContent="Náhľad sa otvoril, ale pri aktualizácii QR kódu nastala chyba: "+(err?.message||err);
+ }
 }
 function closePreview(){
  $('previewModal').classList.remove('open');
