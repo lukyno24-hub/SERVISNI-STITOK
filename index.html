@@ -73,12 +73,21 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  .preview-dialog{display:block!important;width:50mm!important;height:90mm!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important}
  .preview-dialog-head,.preview-actions{display:none!important}
  .preview-stage{display:block!important;width:50mm;height:90mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
- #printArea{display:block!important;width:50mm;height:90mm;margin:0;padding:3mm;border:0;overflow:hidden}
- .label-preview h3{font-size:12pt;margin-bottom:2mm}
- .label-info{font-size:8pt;line-height:1.35}
- .label-preview{display:flex!important;flex-direction:column!important}
- .qr-bottom{width:40mm!important;height:40mm!important;flex-basis:40mm!important;margin:auto auto 0!important}
- #qrcode{width:40mm!important;height:40mm!important;flex-basis:40mm!important}
+ #printArea{display:flex!important;flex-direction:column!important;box-sizing:border-box!important;width:50mm;height:90mm;margin:0;padding:2mm;border:0;overflow:hidden}
+ .label-header{font-size:6pt!important;line-height:1.05!important;margin:0 0 0.8mm!important}
+ .label-preview h3{font-size:8pt!important;line-height:1.05!important;margin:0 0 0.4mm!important}
+ .label-info{font-size:6.2pt!important;line-height:1.05!important}
+ .label-meta-row{font-size:6.2pt!important;line-height:1.05!important;gap:0.8mm!important}
+ .service-section-title{font-size:6.5pt!important;line-height:1.05!important}
+ .label-next{margin-top:0.7mm!important}
+ .service-print-group{margin-top:0.35mm!important}
+ .service-print-title{font-size:6.2pt!important;line-height:1.05!important;margin-bottom:0.15mm!important}
+ .service-print-items{column-gap:1mm!important;row-gap:0.15mm!important}
+ .service-print-item{font-size:5.8pt!important;line-height:1.02!important;gap:0.5mm!important}
+ .service-check{width:2.5mm!important;height:2.5mm!important;min-width:2.5mm!important;font-size:5pt!important}
+ .service-print-note{font-size:5.8pt!important;line-height:1.05!important;margin-top:0.3mm!important}
+ .qr-bottom{width:40mm!important;height:40mm!important;min-height:40mm!important;flex:0 0 40mm!important;margin:auto auto 0!important}
+ #qrcode{width:40mm!important;height:40mm!important;min-height:40mm!important;flex:0 0 40mm!important}
  #qrcode img,#qrcode canvas,#qrcode svg{width:40mm!important;height:40mm!important;display:block}
 }
 </style>
