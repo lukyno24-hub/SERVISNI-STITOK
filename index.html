@@ -191,15 +191,33 @@ function fmtDate(s){if(!s)return "—";const [y,m,d]=s.split("-");return `${d}.$
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function render(){
  const last=records[records.length-1];
+ const draftDescription=buildServiceDescription();
+ const isDraft=!!draftDescription;
+ const unit=document.querySelector('input[name="unit"]:checked')?.value||"km";
+ const shown=isDraft?{
+  date:$('date').value,
+  current:$('current').value.trim(),
+  unit,
+  description:draftDescription,
+  nextDate:$('nextDate').value,
+  nextKm:$('nextKm').value.trim()
+ }:last;
  $('labelTitle').textContent="SERVISCENTRUM NAHALKA";
- if(!last){$('labelCurrent').textContent="Zatiaľ bez servisného záznamu."; $('labelNext').textContent="";$('qrcode').innerHTML="";return;}
- const unit=last.unit||"km";
- const unitText=unit==="mh"?"MTH":"KM";
- $('labelCurrent').innerHTML=`<b>Posledný servis</b><br>Dátum: ${escapeHtml(fmtDate(last.date))}<br>${unitText}: ${escapeHtml(last.current||"—")}<br>${escapeHtml(last.description||"")}`;
- $('labelNext').innerHTML=`<b>Nasledujúci servis</b><br>Dátum: ${escapeHtml(fmtDate(last.nextDate))}<br>${unitText}: ${escapeHtml(last.nextKm||"—")}`;
+ if(!shown){
+  $('labelCurrent').textContent="Zatiaľ bez servisného záznamu.";
+  $('labelNext').textContent="";
+  $('qrcode').innerHTML="";
+  return;
+ }
+ const unitText=(shown.unit||"km")==="mh"?"MTH":"KM";
+ const serviceLines=escapeHtml(shown.description||"").replace(/ \| /g,"<br>");
+ $('labelCurrent').innerHTML=`<b>Posledný servis</b><br>Dátum: ${escapeHtml(fmtDate(shown.date))}<br>${unitText}: ${escapeHtml(shown.current||"—")}<br>${serviceLines}`;
+ $('labelNext').innerHTML=`<b>Nasledujúci servis</b><br>Dátum: ${escapeHtml(fmtDate(shown.nextDate))}<br>${unitText}: ${escapeHtml(shown.nextKm||"—")}`;
  $('qrcode').innerHTML="";
  if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
- new QRCode($('qrcode'),{text:qrText(),width:115,height:115,correctLevel:QRCode.CorrectLevel.M});
+ const qrPayload=payload();
+ if(isDraft) qrPayload.records=[...records,shown];
+ new QRCode($('qrcode'),{text:JSON.stringify(qrPayload),width:115,height:115,correctLevel:QRCode.CorrectLevel.M});
 }
 function buildServiceDescription(){
  const selected=[...document.querySelectorAll('input[name="servicePart"]:checked')];
@@ -225,6 +243,10 @@ function addService(){
  if(!description){alert("Vyber aspoň jednu položku servisného zásahu.");return}
  const unit=document.querySelector('input[name="unit"]:checked')?.value||"km";
  records.push({date,current,unit,description,nextDate,nextKm});
+ // Po uložení záznamu vyčistiť výber, aby sa pri ďalšom servise nepridali staré položky znova.
+ document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
+ $('oilType').value="";
+ $('extraNote').value="";
  currentLabel=records[records.length-1]; render(); save();
  $('appStatus').textContent=`Vytvorený servisný záznam č. ${records.length}. QR obsahuje ${records.length} ${records.length===1?"záznam":"záznamy"}.`;
  renderHistory();
@@ -281,8 +303,13 @@ function updateUnitLabels(){
  $('current').placeholder=isMh?"napr. 3420":"napr. 155200";
  $('nextKm').placeholder=isMh?"napr. 3920":"napr. 170200";
 }
-document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',updateUnitLabels));
+document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',()=>{updateUnitLabels();render()}));
 $('machine').addEventListener('input',()=>{if(records.length)render()});
+// Náhľad štítku sa aktualizuje okamžite pri každom výbere alebo zmene servisnej položky.
+document.querySelectorAll('input[name="servicePart"],#oilType,#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
+ el.addEventListener('input',render);
+ el.addEventListener('change',render);
+});
 updateUnitLabels();
 loadSaved();
 </script>
