@@ -23,6 +23,18 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .unit-choice{display:flex;gap:14px;flex-wrap:wrap;padding:9px 10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff}
 .unit-choice label{display:flex;align-items:center;gap:6px;margin:0;font-weight:normal}
 .unit-choice input{width:auto;margin:0;accent-color:var(--green)}
+.service-picker{min-width:0}
+.service-group{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:#fff;overflow:hidden}
+.service-group summary{padding:12px;font-weight:bold;cursor:pointer;background:#f8fafc;color:#344054}
+.service-options{padding:10px 12px;display:grid;gap:9px}
+.service-options>label,.service-subgroup label{display:flex;align-items:center;gap:8px;margin:0;font-weight:normal}
+.service-options input[type="checkbox"]{width:18px;height:18px;flex:0 0 18px;accent-color:var(--green);padding:0}
+.service-subgroup{border-left:3px solid #d6e5dc;padding:5px 0 5px 10px;display:grid;gap:8px}
+.service-subgroup>b{font-size:13px;color:#475467}
+.service-extra{padding:4px 0 4px 26px}
+.service-extra label{font-size:12px}
+.service-extra input,.service-extra select,.service-extra textarea{margin-top:3px}
+.service-extra textarea{min-height:60px}
 #scanner{display:none;margin-top:12px}.record{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
 .record strong{display:block;margin-bottom:4px}.small{font-size:12px;color:var(--muted)}
 .label-preview{width:50mm;height:90mm;max-width:none;flex:none;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
@@ -68,7 +80,53 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <label><input type="radio" name="unit" value="mh"> Motohodiny (Mh)</label>
 </div></div>
 <div class="full"><label for="current" id="currentLabel">Aktuálny stav v kilometroch</label><input id="current" inputmode="numeric" placeholder="155200"></div>
-<div class="full"><label for="description">Popis servisného zásahu</label><textarea id="description" placeholder="Napr. výmena oleja 5W-30 a filtra"></textarea></div>
+<div class="full service-picker">
+<label>Popis servisného zásahu – vyber položky</label>
+<details class="service-group">
+<summary>Výmena rozvodov</summary>
+<div class="service-options">
+<label><input type="checkbox" name="servicePart" data-group="Výmena rozvodov" value="Remeň"> Remeň</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena rozvodov" value="Vodiaca kladka 1"> Vodiaca kladka 1</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena rozvodov" value="Vodiaca kladka 2"> Vodiaca kladka 2</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena rozvodov" value="Napínacia kladka"> Napínacia kladka</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena rozvodov" value="Vodná pumpa"> Vodná pumpa</label>
+</div>
+</details>
+<details class="service-group">
+<summary>Výmena oleja</summary>
+<div class="service-options">
+<label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej" id="oilCheck"> Olej</label>
+<div class="service-extra"><label for="oilType">Typ oleja (napr. 5W-40, 10W-40)</label><input id="oilType" placeholder="Zadaj typ oleja"></div>
+<label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter oleja"> Filter oleja</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter vzduchu"> Filter vzduchu</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter paliva"> Filter paliva</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter kabíny"> Filter kabíny</label>
+</div>
+</details>
+<details class="service-group">
+<summary>Výmena bŕzd</summary>
+<div class="service-options">
+<div class="service-subgroup"><b>Predné brzdy</b>
+<label><input type="checkbox" name="servicePart" data-group="Výmena bŕzd – predok" value="Kotúče"> Kotúče</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena bŕzd – predok" value="Platničky"> Platničky</label>
+</div>
+<div class="service-subgroup"><b>Zadné brzdy</b>
+<label><input type="checkbox" name="servicePart" data-group="Výmena bŕzd – zadok" value="Kotúče"> Kotúče</label>
+<label><input type="checkbox" name="servicePart" data-group="Výmena bŕzd – zadok" value="Platničky"> Platničky</label>
+</div>
+<label><input type="checkbox" name="servicePart" data-group="Výmena bŕzd" value="Brzdová kvapalina" id="fluidCheck"> Brzdová kvapalina</label>
+<div class="service-extra"><label for="fluidType">Typ brzdovej kvapaliny</label><select id="fluidType"><option value="DOT 3">DOT 3</option><option value="DOT 4" selected>DOT 4</option><option value="DOT 4.1">DOT 4.1</option></select></div>
+</div>
+</details>
+<details class="service-group">
+<summary>Výmena podvozkových častí</summary>
+<div class="service-options">
+<label><input type="checkbox" name="servicePart" data-group="Podvozok – predok" value="Časti prednej nápravy"> Predok – časti nápravy</label>
+<label><input type="checkbox" name="servicePart" data-group="Podvozok – zadok" value="Časti zadnej nápravy"> Zadok – časti nápravy</label>
+</div>
+</details>
+<div class="service-extra"><label for="extraNote">Ďalšia poznámka (nepovinné)</label><textarea id="extraNote" placeholder="Doplňujúce informácie k servisu"></textarea></div>
+</div>
 <div><label for="nextDate">Dátum nasledujúcej výmeny</label><input id="nextDate" type="date"></div>
 <div><label for="nextKm" id="nextLabel">Stav pri ďalšej výmene (km)</label><input id="nextKm" inputmode="numeric" placeholder="170200"></div>
 </div>
@@ -143,10 +201,28 @@ function render(){
  if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  new QRCode($('qrcode'),{text:qrText(),width:115,height:115,correctLevel:QRCode.CorrectLevel.M});
 }
+function buildServiceDescription(){
+ const selected=[...document.querySelectorAll('input[name="servicePart"]:checked')];
+ if(!selected.length && !$('extraNote').value.trim()) return "";
+ const groups=new Map();
+ selected.forEach(el=>{
+  const group=el.dataset.group;
+  if(!groups.has(group)) groups.set(group,[]);
+  let item=el.value;
+  if(el.id==="oilCheck" && $('oilType').value.trim()) item+= " ("+$('oilType').value.trim()+")";
+  if(el.id==="fluidCheck") item+= " ("+$('fluidType').value+")";
+  groups.get(group).push(item);
+ });
+ const lines=[...groups.entries()].map(([group,items])=>group+": "+items.join(", "));
+ const note=$('extraNote').value.trim();
+ if(note) lines.push("Poznámka: "+note);
+ return lines.join(" | ");
+}
 function addService(){
- const machine=$('machine').value.trim(), date=$('date').value, current=$('current').value.trim(), description=$('description').value.trim(), nextDate=$('nextDate').value,nextKm=$('nextKm').value.trim();
+ const machine=$('machine').value.trim(), date=$('date').value, current=$('current').value.trim(), description=buildServiceDescription(), nextDate=$('nextDate').value,nextKm=$('nextKm').value.trim();
  if(!machine){alert("Zadaj označenie stroja.");return}
- if(!date||!current||!description){alert("Vyplň dátum, aktuálne km / motohodiny a popis servisu.");return}
+ if(!date||!current){alert("Vyplň dátum a aktuálny stav km / motohodín.");return}
+ if(!description){alert("Vyber aspoň jednu položku servisného zásahu.");return}
  const unit=document.querySelector('input[name="unit"]:checked')?.value||"km";
  records.push({date,current,unit,description,nextDate,nextKm});
  currentLabel=records[records.length-1]; render(); save();
