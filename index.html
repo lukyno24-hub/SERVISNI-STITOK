@@ -37,9 +37,13 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .service-extra textarea{min-height:60px}
 #scanner{display:none;margin-top:12px}.record{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
 .record strong{display:block;margin-bottom:4px}.small{font-size:12px;color:var(--muted)}
-.label-preview{width:50mm;height:90mm;max-width:none;flex:none;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
-.label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1.5mm;overflow-wrap:anywhere}.label-preview h3{margin:0 0 0.6mm;text-align:center;font-size:9.5pt;line-height:1.15}.label-machine{text-align:center;font-size:8pt;font-weight:bold;margin:0 0 1.5mm;overflow-wrap:anywhere}.label-preview .qrrow{display:flex;justify-content:space-between;align-items:center;gap:2mm}
-#qrcode{flex:0 0 24mm;width:24mm;height:24mm}.label-info{font-size:8pt;line-height:1.35;overflow-wrap:anywhere}
+.label-preview{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
+.label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1.5mm;overflow-wrap:anywhere}.label-preview h3{margin:0 0 0.6mm;text-align:center;font-size:9.5pt;line-height:1.15}
+.label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}
+.label-next{margin-top:1.5mm}
+.qr-bottom{width:40mm;height:40mm;flex:0 0 40mm;margin:auto auto 0;display:flex;align-items:center;justify-content:center}
+#qrcode{width:40mm;height:40mm;flex:0 0 40mm;display:flex;align-items:center;justify-content:center}
+#qrcode img,#qrcode canvas{width:40mm!important;height:40mm!important;max-width:none!important;max-height:none!important}
 .preview-launch{background:#6f42c1;color:white}
 #previewModal{display:none;position:fixed;inset:0;z-index:1000;background:#0009;padding:16px;overflow:auto;align-items:center;justify-content:center}
 #previewModal.open{display:flex}
@@ -61,8 +65,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  #printArea{display:block!important;width:50mm;height:90mm;margin:0;padding:3mm;border:0;overflow:hidden}
  .label-preview h3{font-size:12pt;margin-bottom:2mm}
  .label-info{font-size:8pt;line-height:1.35}
- #qrcode{width:24mm;height:24mm;flex-basis:24mm}
- #qrcode img{width:24mm!important;height:24mm!important}
+ .label-preview{display:flex!important;flex-direction:column!important}
+ .qr-bottom{width:40mm!important;height:40mm!important;flex-basis:40mm!important;margin:auto auto 0!important}
+ #qrcode{width:40mm!important;height:40mm!important;flex-basis:40mm!important}
+ #qrcode img,#qrcode canvas{width:40mm!important;height:40mm!important}
 }
 </style>
 </head>
@@ -171,11 +177,8 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div>serviscentrumnahalka@gmail.com</div>
 </div>
 <div class="label-info" id="labelCurrent">Zatiaľ bez servisného záznamu.</div>
-<div class="qrrow" style="margin-top:10px">
-<div class="label-info" id="labelNext"></div>
-<div id="qrcode" aria-label="QR kód servisnej histórie"></div>
-</div>
-<div class="small" style="margin-top:8px;text-align:center">QR obsahuje kompletnú servisnú históriu stroja</div>
+<div class="label-info label-next" id="labelNext"></div>
+<div class="qr-bottom"><div id="qrcode" aria-label="QR kód kompletnej servisnej histórie"></div></div>
 </section></div>
 <div class="preview-actions"><button class="light" type="button" onclick="closePreview()">Zavrieť</button><button class="primary" type="button" onclick="window.print()">🖨️ Tlačiť štítok</button></div>
 </div></div>
@@ -219,7 +222,7 @@ function render(){
  if(isDraft) qrPayload.records=[...records,shown];
  try{
   // Úroveň L umožní uložiť viac servisných údajov do jedného QR kódu.
-  new QRCode($('qrcode'),{text:JSON.stringify(qrPayload),width:115,height:115,correctLevel:QRCode.CorrectLevel.L});
+  new QRCode($('qrcode'),{text:JSON.stringify(qrPayload),width:400,height:400,correctLevel:QRCode.CorrectLevel.L});
  }catch(err){
   $('qrcode').textContent="História je už príliš dlhá pre jeden QR kód. Záznamy zostali zachované.";
  }
