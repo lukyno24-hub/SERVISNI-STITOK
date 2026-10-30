@@ -105,7 +105,6 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div>0944379060</div>
 <div>serviscentrumnahalka@gmail.com</div>
 </div>
-<div class="label-machine" id="labelMachine"></div>
 <div class="label-info" id="labelCurrent">Zatiaľ bez servisného záznamu.</div>
 <div class="qrrow" style="margin-top:10px">
 <div class="label-info" id="labelNext"></div>
@@ -128,7 +127,6 @@ function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;",
 function render(){
  const last=records[records.length-1];
  $('labelTitle').textContent="SERVISCENTRUM NAHALKA";
- $('labelMachine').textContent=$('machine').value.trim();
  if(!last){$('labelCurrent').textContent="Zatiaľ bez servisného záznamu."; $('labelNext').textContent="";$('qrcode').innerHTML="";return;}
  $('labelCurrent').innerHTML=`<b>Aktuálny servis</b><br>Dátum: ${escapeHtml(fmtDate(last.date))}<br>Km / MH: ${escapeHtml(last.current||"—")}<br>${escapeHtml(last.description||"")}`;
  $('labelNext').innerHTML=`<b>Nasledujúci servis</b><br>Dátum: ${escapeHtml(fmtDate(last.nextDate))}<br>Km / MH: ${escapeHtml(last.nextKm||"—")}`;
