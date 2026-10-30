@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Servisné štítky</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <style>
 :root{--green:#198754;--blue:#0d6efd;--ink:#1f2937;--muted:#667085;--line:#e5e7eb}
@@ -54,7 +54,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .service-print-note{font-size:7pt;line-height:1.2;margin-top:1mm}
 .qr-bottom{width:40mm;height:40mm;flex:0 0 40mm;margin:auto auto 0;display:flex;align-items:center;justify-content:center}
 #qrcode{width:40mm;height:40mm;flex:0 0 40mm;display:flex;align-items:center;justify-content:center}
-#qrcode img,#qrcode canvas{width:40mm!important;height:40mm!important;max-width:none!important;max-height:none!important}
+#qrcode img,#qrcode canvas,#qrcode svg{width:40mm!important;height:40mm!important;max-width:none!important;max-height:none!important;display:block}
 .preview-launch{background:#6f42c1;color:white}
 #previewModal{display:none;position:fixed;inset:0;z-index:1000;background:#0009;padding:16px;overflow:auto;align-items:center;justify-content:center}
 #previewModal.open{display:flex}
@@ -79,7 +79,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  .label-preview{display:flex!important;flex-direction:column!important}
  .qr-bottom{width:40mm!important;height:40mm!important;flex-basis:40mm!important;margin:auto auto 0!important}
  #qrcode{width:40mm!important;height:40mm!important;flex-basis:40mm!important}
- #qrcode img,#qrcode canvas{width:40mm!important;height:40mm!important}
+ #qrcode img,#qrcode canvas,#qrcode svg{width:40mm!important;height:40mm!important;display:block}
 }
 </style>
 </head>
@@ -223,16 +223,23 @@ function render(){
  $('labelCurrent').innerHTML=`<b class="service-section-title">Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.date))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.current||"—")}</span></div>${serviceLines}`;
  $('labelNext').innerHTML=`<b class="service-section-title">Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.nextDate))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.nextKm||"—")}</span></div>`;
  $('qrcode').innerHTML="";
- if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
+ if(typeof qrcode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
  if(isDraft) qrPayload.records=[...records,shown];
  const qrContent=compactQrText(qrPayload);
  try{
-  // Skrátený JSON zachová čitateľné servisné údaje, ale odstráni opakované dlhé názvy polí.
-  new QRCode($('qrcode'),{text:qrContent,width:400,height:400,correctLevel:QRCode.CorrectLevel.L});
+  // UTF-8 zachová slovenskú diakritiku a typeNumber 0 automaticky zvolí vhodnú verziu QR.
+  qrcode.stringToBytes=qrcode.stringToBytesFuncs["UTF-8"];
+  const qr=qrcode(0,"L");
+  qr.addData(qrContent,"Byte");
+  qr.make();
+  $('qrcode').innerHTML=qr.createSvgTag({cellSize:4,margin:4,scalable:true});
+  const qrVersion=(qr.getModuleCount()-17)/4;
+  $('qrcode').setAttribute("data-qr-version",String(qrVersion));
+  $('qrcode').setAttribute("data-qr-bytes",String(utf8Size(qrContent)));
  }catch(err){
   const bytes=utf8Size(qrContent);
-  $('qrcode').textContent="QR kód je príliš dlhý ("+bytes+" bajtov). Záznamy zostali zachované.";
+  $('qrcode').textContent="QR sa nepodarilo vytvoriť: "+(err?.message||String(err))+" ("+bytes+" bajtov).";
  }
 }
 function formatServiceForLabel(description){
