@@ -180,7 +180,22 @@ const $=id=>document.getElementById(id);
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 $('date').value=today();
 function payload(){return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim(),records:records};}
-function qrText(){return JSON.stringify(payload());}
+function compactPayload(source){
+ return {
+  v:2,
+  m:source.machine||"",
+  r:(source.records||[]).map(r=>({
+   d:r.date||"",
+   c:String(r.current||""),
+   u:(r.unit||"km")==="mh"?"MTH":"KM",
+   s:r.description||"",
+   n:r.nextDate||"",
+   x:String(r.nextKm||"")
+  }))
+ };
+}
+function compactQrText(source){return JSON.stringify(compactPayload(source));}
+function utf8Size(value){return unescape(encodeURIComponent(value)).length;}
 function fmtDate(s){if(!s)return "—";const [y,m,d]=s.split("-");return `${d}.${m}.${y}`}
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function render(){
@@ -211,11 +226,13 @@ function render(){
  if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
  if(isDraft) qrPayload.records=[...records,shown];
+ const qrContent=compactQrText(qrPayload);
  try{
-  // Úroveň L umožní uložiť viac servisných údajov do jedného QR kódu.
-  new QRCode($('qrcode'),{text:JSON.stringify(qrPayload),width:400,height:400,correctLevel:QRCode.CorrectLevel.L});
+  // Skrátený JSON zachová čitateľné servisné údaje, ale odstráni opakované dlhé názvy polí.
+  new QRCode($('qrcode'),{text:qrContent,width:400,height:400,correctLevel:QRCode.CorrectLevel.L});
  }catch(err){
-  $('qrcode').textContent="História je už príliš dlhá pre jeden QR kód. Záznamy zostali zachované.";
+  const bytes=utf8Size(qrContent);
+  $('qrcode').textContent="QR kód je príliš dlhý ("+bytes+" bajtov). Záznamy zostali zachované.";
  }
 }
 function formatServiceForLabel(description){
@@ -266,9 +283,26 @@ function parsePayload(raw){
  raw=raw.trim();
  try{
   const obj=JSON.parse(raw);
+  // Nový úsporný formát v2.
+  if(obj && obj.v===2 && Array.isArray(obj.r)){
+   return {
+    app:"ServisnyAsistent",
+    version:2,
+    machine:obj.m||"",
+    records:obj.r.map(r=>({
+     date:r.d||"",
+     current:r.c||"",
+     unit:r.u==="MTH"?"mh":"km",
+     description:r.s||"",
+     nextDate:r.n||"",
+     nextKm:r.x||""
+    }))
+   };
+  }
+  // Podpora starších QR kódov verzie 1.
   if(obj && Array.isArray(obj.records)){return obj}
  }catch(e){}
- // Podpora čitateľného textového QR z iných aplikácií: uloží celý text ako jeden servisný záznam.
+ // Podpora obyčajného textového QR z iných aplikácií.
  return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim()||"Neznámy stroj",records:[{date:"",current:"",description:raw,nextDate:"",nextKm:""}]};
 }
 function loadQR(raw){
