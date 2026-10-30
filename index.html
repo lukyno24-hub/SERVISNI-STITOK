@@ -136,9 +136,9 @@ function render(){
  $('labelTitle').textContent="SERVISCENTRUM NAHALKA";
  if(!last){$('labelCurrent').textContent="Zatiaľ bez servisného záznamu."; $('labelNext').textContent="";$('qrcode').innerHTML="";return;}
  const unit=last.unit||"km";
- const unitText=unit==="mh"?"MOTOhodiny (Mh)":"KILOMETRE (km)";
- $('labelCurrent').innerHTML=`<b>Posledný servis</b><br>Dátum: ${escapeHtml(fmtDate(last.date))}<br>☑ ${unitText}: ${escapeHtml(last.current||"—")}<br>${escapeHtml(last.description||"")}`;
- $('labelNext').innerHTML=`<b>Nasledujúci servis</b><br>Dátum: ${escapeHtml(fmtDate(last.nextDate))}<br>Km / MH: ${escapeHtml(last.nextKm||"—")}`;
+ const unitText=unit==="mh"?"MTH":"KM";
+ $('labelCurrent').innerHTML=`<b>Posledný servis</b><br>Dátum: ${escapeHtml(fmtDate(last.date))}<br>${unitText}: ${escapeHtml(last.current||"—")}<br>${escapeHtml(last.description||"")}`;
+ $('labelNext').innerHTML=`<b>Nasledujúci servis</b><br>Dátum: ${escapeHtml(fmtDate(last.nextDate))}<br>${unitText}: ${escapeHtml(last.nextKm||"—")}`;
  $('qrcode').innerHTML="";
  if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  new QRCode($('qrcode'),{text:qrText(),width:115,height:115,correctLevel:QRCode.CorrectLevel.M});
