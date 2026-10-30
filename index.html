@@ -22,11 +22,33 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .status{font-size:13px;color:var(--muted);margin-top:9px;white-space:pre-wrap}
 #scanner{display:none;margin-top:12px}.record{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
 .record strong{display:block;margin-bottom:4px}.small{font-size:12px;color:var(--muted)}
-.label-preview{width:100%;max-width:420px;margin:10px auto;border:1px dashed #9ca3af;padding:14px;background:white;color:#111}
-.label-preview h3{margin:0 0 8px;text-align:center}.label-preview .qrrow{display:flex;justify-content:space-between;align-items:center;gap:12px}
-#qrcode{flex:0 0 115px;width:115px;height:115px}.label-info{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
-@media(max-width:520px){.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.full{grid-column:auto}.actions .full{grid-column:auto}}
-@media print{@page{size:50mm 90mm;margin:0}html,body{width:50mm;height:90mm;margin:0!important;padding:0!important;background:white}main{width:50mm;max-width:none;margin:0;padding:0}main>*:not(#printArea){display:none!important}#printArea{display:block!important;width:50mm;height:90mm;max-width:none;margin:0;padding:3mm;border:0;overflow:hidden}.label-preview h3{font-size:12pt;margin-bottom:2mm}.label-info{font-size:8pt;line-height:1.35}#qrcode{width:24mm;height:24mm;flex-basis:24mm}#qrcode img{width:24mm!important;height:24mm!important}}
+.label-preview{width:50mm;height:90mm;max-width:none;flex:none;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
+.label-preview h3{margin:0 0 2mm;text-align:center;font-size:12pt}.label-preview .qrrow{display:flex;justify-content:space-between;align-items:center;gap:2mm}
+#qrcode{flex:0 0 24mm;width:24mm;height:24mm}.label-info{font-size:8pt;line-height:1.35;overflow-wrap:anywhere}
+.preview-launch{background:#6f42c1;color:white}
+#previewModal{display:none;position:fixed;inset:0;z-index:1000;background:#0009;padding:16px;overflow:auto;align-items:center;justify-content:center}
+#previewModal.open{display:flex}
+.preview-dialog{width:min(100%,440px);max-height:calc(100vh - 32px);overflow:auto;background:white;border-radius:14px;padding:16px;box-shadow:0 12px 40px #0005}
+.preview-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.preview-dialog-head h2{margin:0;font-size:18px}
+.preview-stage{display:flex;justify-content:center;align-items:flex-start;background:#edf0f3;padding:12px;border-radius:10px;overflow:auto}
+.preview-actions{display:flex;gap:9px;margin-top:12px}.preview-actions button{flex:1}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.full{grid-column:auto}.actions .full{grid-column:auto}.preview-dialog{padding:12px}.preview-actions{flex-direction:column}}
+@media print{
+ @page{size:50mm 90mm;margin:0}
+ html,body{width:50mm;height:90mm;margin:0!important;padding:0!important;background:white!important}
+ main{width:50mm;height:90mm;max-width:none;margin:0;padding:0}
+ main>*:not(#previewModal){display:none!important}
+ #previewModal{display:block!important;position:static!important;inset:auto!important;width:50mm;height:90mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
+ .preview-dialog{display:block!important;width:50mm!important;height:90mm!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important}
+ .preview-dialog-head,.preview-actions{display:none!important}
+ .preview-stage{display:block!important;width:50mm;height:90mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
+ #printArea{display:block!important;width:50mm;height:90mm;margin:0;padding:3mm;border:0;overflow:hidden}
+ .label-preview h3{font-size:12pt;margin-bottom:2mm}
+ .label-info{font-size:8pt;line-height:1.35}
+ #qrcode{width:24mm;height:24mm;flex-basis:24mm}
+ #qrcode img{width:24mm!important;height:24mm!important}
+}
 </style>
 </head>
 <body>
@@ -60,6 +82,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <h2>3. Vytvoriť štítok</h2>
 <div class="actions">
 <button class="primary" onclick="addService()">➕ Pridať servis a vytvoriť QR</button>
+<button class="preview-launch" onclick="openPreview()">👁 Náhľad štítku 50 × 90 mm</button>
 <button class="light" onclick="clearForm()">Vyčistiť formulár</button>
 <button class="secondary full" onclick="window.print()">🖨️ Tlačiť aktuálny štítok</button>
 </div>
@@ -72,7 +95,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <button class="danger" onclick="clearSaved()" style="margin-top:10px">Vymazať uloženú históriu</button>
 </section>
 
-<section id="printArea" class="label-preview">
+<div id="previewModal" onclick="if(event.target===this)closePreview()">
+<div class="preview-dialog" role="dialog" aria-modal="true" aria-labelledby="previewHeading">
+<div class="preview-dialog-head"><h2 id="previewHeading">Náhľad štítku 50 × 90 mm</h2><button class="light" type="button" onclick="closePreview()" aria-label="Zavrieť náhľad">✕</button></div>
+<div class="preview-stage"><section id="printArea" class="label-preview">
 <h3 id="labelTitle">SERVISNÝ ŠTÍTOK</h3>
 <div class="label-info" id="labelCurrent">Zatiaľ bez servisného záznamu.</div>
 <div class="qrrow" style="margin-top:10px">
@@ -80,7 +106,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div id="qrcode" aria-label="QR kód servisnej histórie"></div>
 </div>
 <div class="small" style="margin-top:8px;text-align:center">QR obsahuje kompletnú servisnú históriu stroja</div>
-</section>
+</section></div>
+<div class="preview-actions"><button class="light" type="button" onclick="closePreview()">Zavrieť</button><button class="primary" type="button" onclick="window.print()">🖨️ Tlačiť štítok</button></div>
+</div></div>
 </main>
 <script>
 let records=[], activeScanner=null, currentLabel=null;
@@ -146,6 +174,14 @@ function renderHistory(){
 }
 function clearForm(){$('date').value=today();$('current').value="";$('description').value="";$('nextDate').value="";$('nextKm').value="";$('appStatus').textContent="Formulár vyčistený. Predchádzajúca história zostáva."; }
 function clearSaved(){if(confirm("Naozaj vymazať uloženú servisnú históriu z tohto zariadenia?")){records=[];localStorage.removeItem("servisnyAsistent.records");render();renderHistory();$('appStatus').textContent="História vymazaná.";}}
+function openPreview(){
+ render();
+ $('previewModal').classList.add('open');
+}
+function closePreview(){
+ $('previewModal').classList.remove('open');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
 $('machine').addEventListener('input',()=>{if(records.length)render()});
 loadSaved();
 </script>
