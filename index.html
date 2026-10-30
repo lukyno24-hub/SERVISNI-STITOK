@@ -124,7 +124,18 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <summary>Výmena oleja</summary>
 <div class="service-options">
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej" id="oilCheck"> Olej</label>
-<div class="service-extra"><label for="oilType">Typ oleja (napr. 5W-40, 10W-40)</label><input id="oilType" placeholder="Zadaj typ oleja"></div>
+<div class="service-extra"><label for="oilType">Viskozita oleja</label><select id="oilType">
+<option value="">Vyber typ oleja</option>
+<option value="0W-20">0W-20</option>
+<option value="0W-30">0W-30</option>
+<option value="0W-40">0W-40</option>
+<option value="5W-20">5W-20</option>
+<option value="5W-30">5W-30</option>
+<option value="5W-40">5W-40</option>
+<option value="10W-30">10W-30</option>
+<option value="10W-40">10W-40</option>
+<option value="15W-40">15W-40</option>
+</select></div>
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter oleja"> Filter oleja</label>
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter vzduchu"> Filter vzduchu</label>
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter paliva"> Filter paliva</label>
@@ -376,6 +387,10 @@ $('machine').addEventListener('input',()=>{if(records.length)render()});
 document.querySelectorAll('input[name="servicePart"],#oilType,#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
  el.addEventListener('input',render);
  el.addEventListener('change',render);
+});
+$('oilType').addEventListener('change',()=>{
+ if($('oilType').value) $('oilCheck').checked=true;
+ render();
 });
 updateUnitLabels();
 loadSaved();
