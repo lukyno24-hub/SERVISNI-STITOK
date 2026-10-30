@@ -44,6 +44,13 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .label-meta-row .meta-value{text-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}
 .label-meta-row .meta-date{flex:0 0 auto}
 .label-next{margin-top:1.5mm}
+.service-print-group{margin-top:1mm}
+.service-print-title{font-weight:bold;font-size:7.5pt;line-height:1.2;margin-bottom:0.5mm}
+.service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:2mm;row-gap:0.5mm}
+.service-print-item{display:flex;align-items:center;justify-content:space-between;gap:1mm;font-size:7pt;line-height:1.15;min-width:0}
+.service-print-item .service-print-name{overflow-wrap:anywhere;min-width:0}
+.service-check{width:3mm;height:3mm;min-width:3mm;border:0.3mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:6.5pt;font-weight:bold;line-height:1}
+.service-print-note{font-size:7pt;line-height:1.2;margin-top:1mm}
 .qr-bottom{width:40mm;height:40mm;flex:0 0 40mm;margin:auto auto 0;display:flex;align-items:center;justify-content:center}
 #qrcode{width:40mm;height:40mm;flex:0 0 40mm;display:flex;align-items:center;justify-content:center}
 #qrcode img,#qrcode canvas{width:40mm!important;height:40mm!important;max-width:none!important;max-height:none!important}
@@ -196,7 +203,7 @@ function render(){
   return;
  }
  const unitText=(shown.unit||"km")==="mh"?"MTH":"KM";
- const serviceLines=escapeHtml(shown.description||"").replace(/ \| /g,"<br>");
+ const serviceLines=formatServiceForLabel(shown.description||"");
  $('labelCurrent').innerHTML=`<b>Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.date))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.current||"—")}</span></div>${serviceLines}`;
  $('labelNext').innerHTML=`<b>Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.nextDate))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.nextKm||"—")}</span></div>`;
  $('qrcode').innerHTML="";
@@ -209,6 +216,18 @@ function render(){
  }catch(err){
   $('qrcode').textContent="História je už príliš dlhá pre jeden QR kód. Záznamy zostali zachované.";
  }
+}
+function formatServiceForLabel(description){
+ if(!description) return "";
+ return description.split(" | ").map(section=>{
+  const colon=section.indexOf(":");
+  if(colon<0) return `<div class="service-print-note">${escapeHtml(section)}</div>`;
+  const title=section.slice(0,colon).trim();
+  const values=section.slice(colon+1).split(",").map(v=>v.trim()).filter(Boolean);
+  if(title==="Poznámka") return `<div class="service-print-note"><b>Poznámka:</b> ${escapeHtml(values.join(", "))}</div>`;
+  const items=values.map(value=>`<div class="service-print-item"><span class="service-print-name">${escapeHtml(value)}</span><span class="service-check">✓</span></div>`).join("");
+  return `<div class="service-print-group"><div class="service-print-title">${escapeHtml(title)}</div><div class="service-print-items">${items}</div></div>`;
+ }).join("");
 }
 function buildServiceDescription(){
  const selected=[...document.querySelectorAll('input[name="servicePart"]:checked')];
