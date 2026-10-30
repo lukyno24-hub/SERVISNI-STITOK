@@ -40,6 +40,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .label-preview{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
 .label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1.5mm;overflow-wrap:anywhere}.label-preview h3{margin:0 0 0.6mm;text-align:center;font-size:9.5pt;line-height:1.15}
 .label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}
+.label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;white-space:nowrap;width:100%;font-size:7.5pt;line-height:1.25}
+.label-meta-row .meta-value{text-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}
+.label-meta-row .meta-date{flex:0 0 auto}
 .label-next{margin-top:1.5mm}
 .qr-bottom{width:40mm;height:40mm;flex:0 0 40mm;margin:auto auto 0;display:flex;align-items:center;justify-content:center}
 #qrcode{width:40mm;height:40mm;flex:0 0 40mm;display:flex;align-items:center;justify-content:center}
@@ -194,8 +197,8 @@ function render(){
  }
  const unitText=(shown.unit||"km")==="mh"?"MTH":"KM";
  const serviceLines=escapeHtml(shown.description||"").replace(/ \| /g,"<br>");
- $('labelCurrent').innerHTML=`<b>Posledný servis</b><br>Dátum: ${escapeHtml(fmtDate(shown.date))}<br>${unitText}: ${escapeHtml(shown.current||"—")}<br>${serviceLines}`;
- $('labelNext').innerHTML=`<b>Nasledujúci servis</b><br>Dátum: ${escapeHtml(fmtDate(shown.nextDate))}<br>${unitText}: ${escapeHtml(shown.nextKm||"—")}`;
+ $('labelCurrent').innerHTML=`<b>Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.date))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.current||"—")}</span></div>${serviceLines}`;
+ $('labelNext').innerHTML=`<b>Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.nextDate))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.nextKm||"—")}</span></div>`;
  $('qrcode').innerHTML="";
  if(typeof QRCode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
