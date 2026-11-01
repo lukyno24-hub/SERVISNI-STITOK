@@ -505,14 +505,13 @@ function compactQrText(source){
  const lines=[
   "SERVISNÁ HISTÓRIA",
   "Stroj: "+machine,
-  "Počet záznamov: "+allRecords.length,
   ""
  ];
- allRecords.forEach((record,index)=>{
+ [...allRecords].reverse().forEach((record,index)=>{
   const unit=(record.unit||"km")==="mh"?"MTH":"KM";
   const clean=value=>String(value||"—").replace(/[\r\n]+/g," / ").trim()||"—";
   lines.push(
-   "ZÁZNAM "+(index+1),
+   "SERVIS",
    "Dátum: "+(record.date?fmtDate(record.date):"—"),
    "Stav: "+clean(record.current)+" "+unit,
    "Servis: "+clean(record.description),
