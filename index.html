@@ -142,11 +142,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="grid">
 <div class="full"><label for="machine">Označenie stroja</label><input id="machine" placeholder="Napr. M2-001 alebo Škoda Octavia"></div>
 <div><label for="date">Dátum servisného zásahu</label><input id="date" type="date"></div>
-<div class="full"><label>Jednotka merania</label><div class="unit-choice">
-<label><input type="radio" name="unit" value="km" checked> Kilometre (km)</label>
-<label><input type="radio" name="unit" value="mh"> Motohodiny (Mh)</label>
+<div class="full"><label>Jednotka merania (nepovinné)</label><div class="unit-choice">
+<label><input type="radio" name="unit" value="km"> Kilometre (km)</label>
+<label><input type="radio" name="unit" value="mh"> Motohodiny (MTH)</label>
 </div></div>
-<div class="full"><label for="current" id="currentLabel">Aktuálny stav v kilometroch</label><input id="current" inputmode="numeric" placeholder="155200"></div>
+<div class="full" id="currentField" hidden><label for="current" id="currentLabel">Aktuálny stav v kilometroch</label><input id="current" inputmode="numeric" placeholder="155200"></div>
 <div class="full service-picker">
 <label>Popis servisného zásahu – vyber položky</label>
 <details class="service-group">
@@ -186,7 +186,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="service-extra"><label for="extraNote">Ďalšia poznámka (nepovinné)</label><textarea id="extraNote" placeholder="Doplňujúce informácie k servisu"></textarea></div>
 </div>
 <div><label for="nextDate">Dátum nasledujúcej výmeny</label><input id="nextDate" type="date"></div>
-<div><label for="nextKm" id="nextLabel">Stav pri ďalšej výmene (km)</label><input id="nextKm" inputmode="numeric" placeholder="170200"></div>
+<div id="nextKmField" hidden><label for="nextKm" id="nextLabel">Stav pri ďalšej výmene (km)</label><input id="nextKm" inputmode="numeric" placeholder="170200"></div>
 </div>
 </section>
 
@@ -514,17 +514,15 @@ function compactQrText(source){
   ""
  ];
  [...allRecords].reverse().forEach((record,index)=>{
-  const unit=(record.unit||"km")==="mh"?"MTH":"KM";
+  const hasUnit=record.unit==="km"||record.unit==="mh";
+  const unit=record.unit==="mh"?"MTH":"KM";
   const clean=value=>String(value||"—").replace(/[\r\n]+/g," / ").trim()||"—";
-  lines.push(
-   "SERVIS",
-   "Dátum: "+(record.date?fmtDate(record.date):"—"),
-   "Stav: "+clean(record.current)+" "+unit,
-   "Servis: "+clean(record.description),
-   "Ďalší servis: "+(record.nextDate?fmtDate(record.nextDate):"—"),
-   "Pri ďalšom servise: "+clean(record.nextKm)+" "+unit,
-   ""
-  );
+  lines.push("SERVIS","Dátum: "+(record.date?fmtDate(record.date):"—"));
+  if(hasUnit&&record.current) lines.push("Stav: "+clean(record.current)+" "+unit);
+  lines.push("Servis: "+clean(record.description));
+  lines.push("Ďalší servis: "+(record.nextDate?fmtDate(record.nextDate):"—"));
+  if(hasUnit&&record.nextKm) lines.push("Pri ďalšom servise: "+clean(record.nextKm)+" "+unit);
+  lines.push("");
  });
  return lines.join("\n").trim();
 }
@@ -535,14 +533,14 @@ function render(){
  const last=records[records.length-1];
  const draftDescription=buildServiceDescription();
  const isDraft=!!draftDescription;
- const unit=document.querySelector('input[name="unit"]:checked')?.value||"km";
+ const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
  const shown=isDraft?{
   date:$('date').value,
-  current:$('current').value.trim(),
+  current:unit?$('current').value.trim():"",
   unit,
   description:draftDescription,
   nextDate:$('nextDate').value,
-  nextKm:$('nextKm').value.trim()
+  nextKm:unit?$('nextKm').value.trim():""
  }:last;
  $('labelTitle').textContent="SERVISCENTRUM NAHALKA";
  if(!shown){
@@ -551,10 +549,13 @@ function render(){
   $('qrcode').innerHTML="";
   return;
  }
- const unitText=(shown.unit||"km")==="mh"?"MTH":"KM";
+ const hasUnit=shown.unit==="km"||shown.unit==="mh";
+ const unitText=shown.unit==="mh"?"MTH":"KM";
  const serviceLines=formatServiceForLabel(shown.description||"");
- $('labelCurrent').innerHTML=`<b class="service-section-title">Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.date))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.current||"—")}</span></div>${serviceLines}`;
- $('labelNext').innerHTML=`<b class="service-section-title">Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: ${escapeHtml(fmtDate(shown.nextDate))}</span><span class="meta-value">${unitText}: ${escapeHtml(shown.nextKm||"—")}</span></div>`;
+ const currentMeta=hasUnit&&shown.current?'<div class="label-meta-row"><span class="meta-value">'+unitText+": "+escapeHtml(shown.current)+'</span></div>':"";
+ const nextMeta=hasUnit&&shown.nextKm?'<div class="label-meta-row"><span class="meta-value">'+unitText+": "+escapeHtml(shown.nextKm)+'</span></div>':"";
+ $('labelCurrent').innerHTML='<b class="service-section-title">Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.date))+'</span></div>'+currentMeta+serviceLines;
+ $('labelNext').innerHTML='<b class="service-section-title">Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.nextDate))+'</span></div>'+nextMeta;
  $('qrcode').innerHTML="";
  if(typeof qrcode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
@@ -640,11 +641,11 @@ function parsePayload(raw){
    });
    const currentMatch=(fields["Stav"]||"").match(/^(.*?)\s+(KM|MTH)$/i);
    const nextMatch=(fields["Pri ďalšom servise"]||"").match(/^(.*?)\s+(KM|MTH)$/i);
-   const unit=((currentMatch&&currentMatch[2])||(nextMatch&&nextMatch[2])||"KM").toUpperCase();
+   const unit=((currentMatch&&currentMatch[2])||(nextMatch&&nextMatch[2])||"").toUpperCase();
    return {
     date:parseReadableDate(fields["Dátum"]),
     current:currentMatch?currentMatch[1]:(fields["Stav"]||""),
-    unit:unit==="MTH"?"mh":"km",
+    unit:unit==="MTH"?"mh":unit==="KM"?"km":"",
     description:fields["Servis"]||"",
     nextDate:parseReadableDate(fields["Ďalší servis"]),
     nextKm:nextMatch?nextMatch[1]:(fields["Pri ďalšom servise"]||"")
@@ -682,7 +683,7 @@ function renderHistory(){
  const machineName=$('machine').value.trim();
  $('historyMachine').textContent="Stroj: "+(machineName||"—");
  if(!records.length){$('historyList').textContent="Najprv naskenuj QR kód z predchádzajúceho štítku.";return}
- $('historyList').innerHTML=records.map((r,i)=>{const u=r.unit||"km";const ut=u==="mh"?"MTH":"KM";return `<div class="record"><strong>${i+1}. ${escapeHtml(fmtDate(r.date))} · ${escapeHtml(r.current||"—")} ${ut}</strong>${escapeHtml(r.description||"")}<div class="small">Ďalší servis: ${escapeHtml(fmtDate(r.nextDate))} · ${escapeHtml(r.nextKm||"—")} ${ut}</div></div>`;}).join("");
+ $('historyList').innerHTML=records.map((r,i)=>{const hasUnit=r.unit==="km"||r.unit==="mh";const ut=r.unit==="mh"?"MTH":"KM";const current=hasUnit&&r.current?" · "+escapeHtml(r.current)+" "+ut:"";const next=hasUnit&&r.nextKm?" · "+escapeHtml(r.nextKm)+" "+ut:"";return `<div class="record"><strong>${i+1}. ${escapeHtml(fmtDate(r.date))}${current}</strong>${escapeHtml(r.description||"")}<div class="small">Ďalší servis: ${escapeHtml(fmtDate(r.nextDate))}${next}</div></div>`;}).join("");
 }
 function clearForm(){
  $('date').value=today();
@@ -710,10 +711,18 @@ function closePreview(){
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
 function updateUnitLabels(){
- const unit=document.querySelector('input[name="unit"]:checked')?.value||"km";
+ const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
+ const hasUnit=unit==="km"||unit==="mh";
  const isMh=unit==="mh";
+ $('currentField').hidden=!hasUnit;
+ $('nextKmField').hidden=!hasUnit;
+ if(!hasUnit){
+  $('currentLabel').textContent="Aktuálny stav";
+  $('nextLabel').textContent="Stav pri ďalšej výmene";
+  return;
+ }
  $('currentLabel').textContent=isMh?"Aktuálny stav v motohodinách":"Aktuálny stav v kilometroch";
- $('nextLabel').textContent=isMh?"Stav pri ďalšej výmene (Mh)":"Stav pri ďalšej výmene (km)";
+ $('nextLabel').textContent=isMh?"Stav pri ďalšej výmene (MTH)":"Stav pri ďalšej výmene (km)";
  $('current').placeholder=isMh?"napr. 3420":"napr. 155200";
  $('nextKm').placeholder=isMh?"napr. 3920":"napr. 170200";
 }
