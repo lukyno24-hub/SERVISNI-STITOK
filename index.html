@@ -126,6 +126,13 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
    <div><span>Zostáva kusov</span><strong id="labelRemaining">—</strong></div>
   </div>
  </div>
+ <div class="media-details">
+  <b>Páska / ribon</b>
+  <div class="usage-counters">
+   <div><span>Spotrebované / celkom</span><strong id="ribbonUsage">— / —</strong></div>
+   <div><span>Zostáva kusov</span><strong id="ribbonRemaining">—</strong></div>
+  </div>
+ </div>
 </div>
 </section>
 
@@ -255,6 +262,8 @@ function setPrinterState(connected,message){
   $('paperSizeStatus').textContent="Tlačiareň nie je pripojená.";
   $('labelUsage').textContent="— / —";
   $('labelRemaining').textContent="—";
+  $('ribbonUsage').textContent="— / —";
+  $('ribbonRemaining').textContent="—";
  }
 }
 function readPrinterFrame(event){
@@ -348,11 +357,17 @@ async function detectOtherPrinterInfo(){
  $('paperSizeStatus').textContent="Načítavam rozmer štítku z RFID…";
  $('labelUsage').textContent="— / —";
  $('labelRemaining').textContent="—";
+ $('ribbonUsage').textContent="— / —";
+ $('ribbonRemaining').textContent="—";
 
- let label=null,modelId=null;
+ let label=null,ribbon=null,modelId=null;
  try{
   const r=await requestPrinterResponse(0x1a,[0x01],0x1b,3000);
   label=decodeRfidInfo(r.data);
+ }catch(e){}
+ try{
+  const r=await requestPrinterResponse(0x1c,[0x01],0x1d,3000);
+  ribbon=decodeRfidInfo(r.data);
  }catch(e){}
  try{
   const r=await requestPrinterResponse(0x40,[0x08],0x48,2500);
@@ -373,6 +388,10 @@ async function detectOtherPrinterInfo(){
  if(label&&label.tagPresent&&label.total>=0&&label.used>=0){
   $('labelUsage').textContent=label.used+" / "+label.total;
   $('labelRemaining').textContent=String(Math.max(0,label.total-label.used));
+ }
+ if(ribbon&&ribbon.tagPresent&&ribbon.total>=0&&ribbon.used>=0){
+  $('ribbonUsage').textContent=ribbon.used+" / "+ribbon.total;
+  $('ribbonRemaining').textContent=String(Math.max(0,ribbon.total-ribbon.used));
  }
 }
 async function writePrinter(data){
