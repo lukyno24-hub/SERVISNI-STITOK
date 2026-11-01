@@ -39,6 +39,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .unit-choice{display:flex;gap:14px;flex-wrap:wrap;padding:9px 10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff}
 .unit-choice label{display:flex;align-items:center;gap:6px;margin:0;font-weight:normal}
 .unit-choice input{width:auto;margin:0;accent-color:var(--green)}
+.period-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff}
+.period-choice label{display:flex;align-items:center;gap:5px;font-size:13px;margin:0;white-space:nowrap}
+.period-choice input{width:15px;height:15px;margin:0;accent-color:var(--green)}
+.next-date-result{margin-top:8px;font-size:13px;color:#344054}
+.next-date-result strong{font-size:14px;color:var(--green)}
 .service-picker{min-width:0}
 .service-group{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:#fff;overflow:hidden}
 .service-group summary{padding:12px;font-weight:bold;cursor:pointer;background:#f8fafc;color:#344054}
@@ -185,7 +190,19 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 
 <div class="service-extra"><label for="extraNote">Ďalšia poznámka (nepovinné)</label><textarea id="extraNote" placeholder="Doplňujúce informácie k servisu"></textarea></div>
 </div>
-<div><label for="nextDate">Dátum nasledujúcej výmeny</label><input id="nextDate" type="date"></div>
+<div class="full">
+ <label>Obdobie do nasledujúcej výmeny – môžeš vybrať viac možností</label>
+ <div class="period-choice">
+  <label><input type="checkbox" name="nextPeriod" value="6"> 0,5 roka</label>
+  <label><input type="checkbox" name="nextPeriod" value="12"> 1 rok</label>
+  <label><input type="checkbox" name="nextPeriod" value="24"> 2 roky</label>
+  <label><input type="checkbox" name="nextPeriod" value="36"> 3 roky</label>
+  <label><input type="checkbox" name="nextPeriod" value="60"> 5 rokov</label>
+  <label><input type="checkbox" name="nextPeriod" value="120"> 10 rokov</label>
+ </div>
+ <div class="next-date-result">Dátum nasledujúcej výmeny: <strong id="nextDateDisplay">Vyber obdobie</strong></div>
+ <input id="nextDate" type="hidden" value="">
+</div>
 <div id="nextKmField" hidden><label for="nextKm" id="nextLabel">Stav pri ďalšej výmene (km)</label><input id="nextKm" inputmode="numeric" placeholder="170200"></div>
 </div>
 </section>
@@ -483,6 +500,23 @@ async function pripojit(){
   if(!printerDevice?.gatt?.connected) setPrinterState(false,$('printerStatus').textContent);
  }
 }
+function calculateNextDate(){
+ const start=$('date').value;
+ const months=[...document.querySelectorAll('input[name="nextPeriod"]:checked')].reduce((sum,el)=>sum+Number(el.value||0),0);
+ if(!start||months===0) return "";
+ const [year,month,day]=start.split("-").map(Number);
+ const targetMonth=month-1+months;
+ const targetYear=year+Math.floor(targetMonth/12);
+ const monthIndex=targetMonth%12;
+ const lastDay=new Date(targetYear,monthIndex+1,0).getDate();
+ const targetDay=Math.min(day,lastDay);
+ return targetYear+"-"+String(monthIndex+1).padStart(2,"0")+"-"+String(targetDay).padStart(2,"0");
+}
+function updateNextDate(){
+ const value=calculateNextDate();
+ $('nextDate').value=value;
+ $('nextDateDisplay').textContent=value?fmtDate(value):"Vyber obdobie";
+}
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 $('date').value=today();
 function payload(){return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim(),records:records};}
@@ -530,6 +564,7 @@ function utf8Size(value){return unescape(encodeURIComponent(value)).length;}
 function fmtDate(s){if(!s)return "—";const [y,m,d]=s.split("-");return `${d}.${m}.${y}`}
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function render(){
+ updateNextDate();
  const last=records[records.length-1];
  const draftDescription=buildServiceDescription();
  const isDraft=!!draftDescription;
@@ -689,6 +724,8 @@ function clearForm(){
  $('date').value=today();
  $('current').value="";
  $('nextDate').value="";
+ document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
+ $('nextDateDisplay').textContent="Vyber obdobie";
  $('nextKm').value="";
  document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
  $('oilType').value="";
@@ -728,6 +765,8 @@ function updateUnitLabels(){
 }
 document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',()=>{updateUnitLabels();render()}));
 $('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
+document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
+$('date').addEventListener('change',()=>{updateNextDate();render()});
 // Náhľad štítku sa aktualizuje okamžite pri každom výbere alebo zmene servisnej položky.
 document.querySelectorAll('input[name="servicePart"],#oilType,#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
  el.addEventListener('input',render);
