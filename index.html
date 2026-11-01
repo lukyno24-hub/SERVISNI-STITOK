@@ -204,7 +204,25 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <div class="next-date-result">Dátum nasledujúcej výmeny: <strong id="nextDateDisplay">Vyber obdobie</strong></div>
  <input id="nextDate" type="hidden" value="">
 </div>
-<div id="nextKmField" hidden><label for="nextKm" id="nextLabel">Stav pri ďalšej výmene (km)</label><input id="nextKm" inputmode="numeric" placeholder="170200"></div>
+<div class="full" id="kmIntervalPicker" hidden>
+ <label>Interval kilometrov do ďalšej výmeny – môžeš vybrať viac možností</label>
+ <div class="period-choice">
+  <label><input type="checkbox" name="kmInterval" value="1000"> 1 000</label>
+  <label><input type="checkbox" name="kmInterval" value="2000"> 2 000</label>
+  <label><input type="checkbox" name="kmInterval" value="3000"> 3 000</label>
+  <label><input type="checkbox" name="kmInterval" value="5000"> 5 000</label>
+  <label><input type="checkbox" name="kmInterval" value="10000"> 10 000</label>
+  <label><input type="checkbox" name="kmInterval" value="15000"> 15 000</label>
+  <label id="timingInterval20000" hidden><input type="checkbox" name="kmInterval" value="20000"> 20 000</label>
+  <label id="timingInterval30000" hidden><input type="checkbox" name="kmInterval" value="30000"> 30 000</label>
+  <label id="timingInterval50000" hidden><input type="checkbox" name="kmInterval" value="50000"> 50 000</label>
+  <label id="timingInterval100000" hidden><input type="checkbox" name="kmInterval" value="100000"> 100 000</label>
+  <label id="timingInterval150000" hidden><input type="checkbox" name="kmInterval" value="150000"> 150 000</label>
+ </div>
+ <div class="next-date-result">Stav pri ďalšej výmene: <strong id="kmNextResult">Zadaj aktuálne kilometre a vyber interval</strong></div>
+ <div id="nextKmField" hidden><input id="nextKm" inputmode="numeric" placeholder="170200" readonly></div>
+</div>
+<div id="nextKmManualField" hidden><label for="nextKmManual" id="nextLabel">Stav pri ďalšej výmene (MTH)</label><input id="nextKmManual" inputmode="numeric" placeholder="3920"></div>
 </div>
 </section>
 
@@ -577,7 +595,7 @@ function render(){
   unit,
   description:draftDescription,
   nextDate:$('nextDate').value,
-  nextKm:unit?$('nextKm').value.trim():""
+  nextKm:unit==="km"?$('nextKm').value.trim():unit==="mh"?$('nextKmManual').value.trim():""
  }:last;
  $('labelTitle').textContent="SERVISCENTRUM NAHALKA";
  if(!shown){
@@ -725,6 +743,8 @@ function clearForm(){
  $('date').value=today();
  $('current').value="";
  $('nextDate').value="";
+ $('nextKmManual').value="";
+ document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.checked=false);
  document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
  $('nextDateDisplay').textContent="Vyber obdobie";
  $('nextKm').value="";
@@ -752,16 +772,42 @@ function updateUnitLabels(){
  const hasUnit=unit==="km"||unit==="mh";
  const isMh=unit==="mh";
  $('currentField').hidden=!hasUnit;
- $('nextKmField').hidden=!hasUnit;
+ $('kmIntervalPicker').hidden=unit!=="km";
+ $('nextKmManualField').hidden=unit!=="mh";
+ $('nextKmField').hidden=unit!=="km";
  if(!hasUnit){
   $('currentLabel').textContent="Aktuálny stav";
   $('nextLabel').textContent="Stav pri ďalšej výmene";
+  updateKmIntervalOptions();
   return;
  }
  $('currentLabel').textContent=isMh?"Aktuálny stav v motohodinách":"Aktuálny stav v kilometroch";
- $('nextLabel').textContent=isMh?"Stav pri ďalšej výmene (MTH)":"Stav pri ďalšej výmene (km)";
+ $('nextLabel').textContent="Stav pri ďalšej výmene (MTH)";
  $('current').placeholder=isMh?"napr. 3420":"napr. 155200";
- $('nextKm').placeholder=isMh?"napr. 3920":"napr. 170200";
+ $('nextKmManual').placeholder="napr. 3920";
+ updateKmIntervalOptions();
+}
+function updateKmIntervalOptions(){
+ const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
+ const selectedParts=[...document.querySelectorAll('input[name="servicePart"]:checked')];
+ const hasOil=selectedParts.some(el=>el.dataset.group==="Výmena oleja");
+ const hasTiming=selectedParts.some(el=>el.dataset.group==="Výmena rozvodov");
+ const show=unit==="km"&&(hasOil||hasTiming);
+ $('kmIntervalPicker').hidden=!show;
+ [20000,30000,50000,100000,150000].forEach(value=>{
+  const label=$('timingInterval'+value);
+  if(label) label.hidden=!hasTiming;
+  if(!hasTiming){
+   const checkbox=document.querySelector('input[name="kmInterval"][value="'+value+'"]');
+   if(checkbox) checkbox.checked=false;
+  }
+ });
+ const months=[...document.querySelectorAll('input[name="kmInterval"]:checked')].reduce((sum,el)=>sum+Number(el.value||0),0);
+ const current=Number(String($('current').value).replace(/\s/g,""));
+ const validCurrent=Number.isFinite(current)&&current>=0&&$('current').value.trim()!=="";
+ const next=validCurrent&&months>0?current+months:null;
+ $('nextKm').value=next===null?"":String(next);
+ $('kmNextResult').textContent=next===null?"Zadaj aktuálne kilometre a vyber interval":next.toLocaleString("sk-SK")+" km";
 }
 document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',()=>{updateUnitLabels();render()}));
 $('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
@@ -769,10 +815,11 @@ document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventLis
 $('date').addEventListener('input',()=>{updateNextDate();render()});
 $('date').addEventListener('change',()=>{updateNextDate();render()});
 // Náhľad štítku sa aktualizuje okamžite pri každom výbere alebo zmene servisnej položky.
-document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
- el.addEventListener('input',render);
- el.addEventListener('change',render);
+document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date,#current,#nextDate,#nextKm,#nextKmManual').forEach(el=>{
+ el.addEventListener('input',()=>{updateKmIntervalOptions();render()});
+ el.addEventListener('change',()=>{updateKmIntervalOptions();render()});
 });
+document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.addEventListener('change',()=>{updateKmIntervalOptions();render()}));
 updateUnitLabels();
 </script>
 </body>
