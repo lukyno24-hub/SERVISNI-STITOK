@@ -18,6 +18,12 @@ input,textarea{width:100%;padding:11px;border:1px solid #cfd4dc;border-radius:7p
 textarea{min-height:78px;resize:vertical}.full{grid-column:1/-1}
 button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:bold;cursor:pointer}
 .primary{background:var(--green);color:white}.secondary{background:var(--blue);color:white}.light{background:#eef2f6;color:#344054}.danger{background:#dc3545;color:white}
+.printer-panel{text-align:center}
+.printer-button{width:100%;padding:14px;color:white;font-weight:bold;font-size:16px;transition:background .15s ease}
+.printer-button.disconnected{background:#dc3545}
+.printer-button.connected{background:#198754}
+.printer-button:disabled{opacity:.75;cursor:wait}
+.printer-panel .status{margin-top:8px;text-align:center}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.actions .full{grid-column:1/-1}
 .status{font-size:13px;color:var(--muted);margin-top:9px;white-space:pre-wrap}
 .unit-choice{display:flex;gap:14px;flex-wrap:wrap;padding:9px 10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff}
@@ -98,6 +104,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <body>
 <main>
 <h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div>
+<section class="panel printer-panel">
+<button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
+<div id="printerStatus" class="status" role="status">Tlačiareň nie je pripojená.</div>
+</section>
 
 <section class="panel">
 <h2>1. Stroj / vozidlo</h2>
@@ -195,7 +205,85 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </main>
 <script>
 let records=[], activeScanner=null, currentLabel=null;
+let printerDevice=null, printerTx=null, printerRx=null;
+const printerUuids=[
+ "0000fee7-0000-1000-8000-00805f9b34fb",
+ "0000e7fe-0000-1000-8000-00805f9b34fb",
+ "0000ff00-0000-1000-8000-00805f9b34fb",
+ "0000ff10-0000-1000-8000-00805f9b34fb"
+];
 const $=id=>document.getElementById(id);
+function printerPacket(cmd,data=[]){
+ const packet=[0x55,0x55,cmd,data.length,...data];
+ let checksum=cmd^data.length;
+ for(const value of data) checksum^=value;
+ packet.push(checksum,0xaa,0xaa);
+ return new Uint8Array(packet);
+}
+function setPrinterState(connected,message){
+ const button=$('printerButton');
+ button.classList.toggle('connected',connected);
+ button.classList.toggle('disconnected',!connected);
+ button.textContent=connected?"🟢 Odpojiť Niimbot M2":"🔴 Pripojiť Niimbot M2";
+ $('printerStatus').textContent=message||(connected?"Tlačiareň Niimbot M2 je pripojená.":"Tlačiareň nie je pripojená.");
+}
+async function writePrinter(data){
+ if(!printerTx) throw new Error("Tlačiareň nie je pripojená.");
+ if(printerTx.properties.writeWithoutResponse && printerTx.writeValueWithoutResponse){
+  await printerTx.writeValueWithoutResponse(data);
+ }else if(printerTx.writeValueWithResponse){
+  await printerTx.writeValueWithResponse(data);
+ }else{
+  await printerTx.writeValue(data);
+ }
+}
+async function pripojit(){
+ if(!navigator.bluetooth){
+  setPrinterState(false,"Tento prehliadač nepodporuje Web Bluetooth. Použi Chrome na Androide alebo počítači cez HTTPS.");
+  return;
+ }
+ if(printerDevice?.gatt?.connected){
+  printerDevice.gatt.disconnect();
+  return;
+ }
+ const button=$('printerButton');
+ button.disabled=true;
+ button.textContent="Hľadám tlačiareň…";
+ $('printerStatus').textContent="Vyber Niimbot M2 v zozname Bluetooth zariadení.";
+ try{
+  printerDevice=await navigator.bluetooth.requestDevice({
+   filters:[{namePrefix:"M2"},{namePrefix:"NIIMBOT"},{namePrefix:"JC"}],
+   optionalServices:printerUuids
+  });
+  printerDevice.addEventListener('gattserverdisconnected',()=>{
+   printerTx=null;printerRx=null;
+   setPrinterState(false,"Spojenie s tlačiarňou bolo prerušené.");
+  });
+  $('printerStatus').textContent="Pripájam sa k "+(printerDevice.name||"tlačiarni")+"…";
+  const server=await printerDevice.gatt.connect();
+  let service=null;
+  for(const uuid of printerUuids){
+   try{service=await server.getPrimaryService(uuid);if(service)break;}catch(e){}
+  }
+  if(!service) throw new Error("Tlačiareň neposkytla známu Bluetooth službu. Skontroluj, či ide o Niimbot M2.");
+  const characteristics=await service.getCharacteristics();
+  printerTx=characteristics.find(ch=>ch.properties.write||ch.properties.writeWithoutResponse);
+  printerRx=characteristics.find(ch=>ch.properties.notify||ch.properties.indicate)||null;
+  if(!printerTx) throw new Error("V Bluetooth službe sa nenašiel kanál na odosielanie dát.");
+  if(printerRx) await printerRx.startNotifications().catch(()=>{});
+  await writePrinter(printerPacket(0x01,[0x01]));
+  await new Promise(resolve=>setTimeout(resolve,80));
+  await writePrinter(printerPacket(0x40,[0x01]));
+  setPrinterState(true,"Pripojená: "+(printerDevice.name||"Niimbot M2"));
+ }catch(error){
+  printerTx=null;printerRx=null;
+  if(printerDevice?.gatt?.connected) printerDevice.gatt.disconnect();
+  setPrinterState(false,"Pripojenie zlyhalo: "+(error?.message||String(error)));
+ }finally{
+  button.disabled=false;
+  if(!printerDevice?.gatt?.connected) setPrinterState(false,$('printerStatus').textContent);
+ }
+}
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 $('date').value=today();
 function payload(){return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim(),records:records};}
