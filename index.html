@@ -339,22 +339,24 @@ function applyManualPaperSize(){
 }
 async function detectPaperSize(){
  paperSize=null;
- setPaperStatus("Čítam informácie o vloženom RFID kotúči…");
+ setPaperStatus("Čítam RFID kotúč a dekódujem rozmery podľa protokolu Niimbot…");
  try{
   // NiimBlueLib používa príkaz 0x59 a odpoveď 0x69.
   const info=await requestPrinterResponse(0x59,[0x01],0x69,4000);
   if(info.data.length!==18){
+   const raw=info.data.map(v=>v.toString(16).padStart(2,"0")).join(" ");
    throw new Error(info.data.length===1
     ?"Tlačiareň nevrátila údaje o rozmere z RFID kotúča."
-    :"Odpoveď o papieri má neznámy formát ("+info.data.length+" bajtov).");
+    :"Odpoveď o papieri má neznámy formát ("+info.data.length+" bajtov; HEX: "+raw+").");
   }
-  // Protokol Niimbot ukladá tieto 16-bitové hodnoty v poradí big-endian.
+  // Protokol Niimbot ukladá 16-bitové hodnoty v poradí big-endian.
   const gapHeight=readU16BE(info.data,5)/10;
   const totalHeight=readU16BE(info.data,7)/10;
   const width=readU16BE(info.data,11)/10;
   const height=totalHeight;
   if(width<10||width>100||height<10||height>200){
-   throw new Error("Tlačiareň vrátila neplatné rozmery: "+width+" × "+height+" mm.");
+   const raw=info.data.map(v=>v.toString(16).padStart(2,"0")).join(" ");
+   throw new Error("Dekódované rozmery: "+width+" × "+height+" mm. Odpoveď RFID (HEX): "+raw);
   }
   paperSize={width,height,gapHeight,paperType:info.data[4],source:"rfid"};
   $('manualPaperWidth').value=width;
