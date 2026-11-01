@@ -519,6 +519,7 @@ function updateNextDate(){
 }
 function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 $('date').value=today();
+updateNextDate();
 function payload(){return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim(),records:records};}
 function compactPayload(source){
  return {
@@ -766,6 +767,7 @@ function updateUnitLabels(){
 document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',()=>{updateUnitLabels();render()}));
 $('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
 document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
+$('date').addEventListener('input',()=>{updateNextDate();render()});
 $('date').addEventListener('change',()=>{updateNextDate();render()});
 // Náhľad štítku sa aktualizuje okamžite pri každom výbere alebo zmene servisnej položky.
 document.querySelectorAll('input[name="servicePart"],#oilType,#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
