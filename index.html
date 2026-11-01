@@ -748,6 +748,8 @@ function clearForm(){
  document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
  $('nextDateDisplay').textContent="Vyber obdobie";
  $('nextKm').value="";
+ document.querySelectorAll('input[name="unit"]').forEach(el=>{el.checked=false;el.dataset.wasSelected="false";});
+ updateUnitLabels();
  document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
  $('fluidType').value="DOT 4";
  $('extraNote').value="";
@@ -809,7 +811,20 @@ function updateKmIntervalOptions(){
  $('nextKm').value=next===null?"":String(next);
  $('kmNextResult').textContent=next===null?"Zadaj aktuálne kilometre a vyber interval":next.toLocaleString("sk-SK")+" km";
 }
-document.querySelectorAll('input[name="unit"]').forEach(el=>el.addEventListener('change',()=>{updateUnitLabels();render()}));
+document.querySelectorAll('input[name="unit"]').forEach(el=>{
+ el.addEventListener('click',()=>{
+  if(el.checked){
+   const wasSelected=el.dataset.wasSelected==="true";
+   document.querySelectorAll('input[name="unit"]').forEach(other=>{other.dataset.wasSelected="false";});
+   if(wasSelected) el.checked=false;
+   else el.dataset.wasSelected="true";
+  }
+  updateUnitLabels();
+  updateKmIntervalOptions();
+  render();
+ });
+ el.addEventListener('change',()=>{updateUnitLabels();updateKmIntervalOptions();render()});
+});
 $('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
 document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
 $('date').addEventListener('input',()=>{updateNextDate();render()});
