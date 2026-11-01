@@ -500,7 +500,7 @@ function compactPayload(source){
  };
 }
 function compactQrText(source){
- const machine=String(source.machine||"Neoznačený stroj").replace(/[\\r\\n]+/g," ").trim();
+ const machine=String(source.machine||"Neoznačený stroj").replace(/[\r\n]+/g," ").trim();
  const allRecords=source.records||[];
  const lines=[
   "SERVISNÁ HISTÓRIA",
@@ -510,7 +510,7 @@ function compactQrText(source){
  ];
  allRecords.forEach((record,index)=>{
   const unit=(record.unit||"km")==="mh"?"MTH":"KM";
-  const clean=value=>String(value||"—").replace(/[\\r\\n]+/g," / ").trim()||"—";
+  const clean=value=>String(value||"—").replace(/[\r\n]+/g," / ").trim()||"—";
   lines.push(
    "ZÁZNAM "+(index+1),
    "Dátum: "+(record.date?fmtDate(record.date):"—"),
@@ -521,7 +521,7 @@ function compactQrText(source){
    ""
   );
  });
- return lines.join("\\n").trim();
+ return lines.join("\n").trim();
 }
 function utf8Size(value){return unescape(encodeURIComponent(value)).length;}
 function fmtDate(s){if(!s)return "—";const [y,m,d]=s.split("-");return `${d}.${m}.${y}`}
@@ -600,41 +600,36 @@ function buildServiceDescription(){
  return lines.join(" | ");
 }
 function parseReadableDate(value){
- const match=String(value||"").trim().match(/^(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})$/);
+ const match=String(value||"").trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
  return match?match[3]+"-"+match[2].padStart(2,"0")+"-"+match[1].padStart(2,"0"):"";
 }
 function parsePayload(raw){
  raw=raw.trim();
  try{
   const obj=JSON.parse(raw);
-  // Podpora starších úsporných QR kódov verzie 2.
   if(obj && obj.v===2 && Array.isArray(obj.r)){
    return {
     app:"ServisnyAsistent",version:2,machine:obj.m||"",
     records:obj.r.map(r=>({date:r.d||"",current:r.c||"",unit:r.u==="MTH"?"mh":"km",description:r.s||"",nextDate:r.n||"",nextKm:r.x||""}))
    };
   }
-  // Podpora pôvodných QR kódov verzie 1.
   if(obj && Array.isArray(obj.records)) return obj;
  }catch(e){}
 
- // Nový ľudsky čitateľný textový formát.
  if(/^SERVISNÁ HISTÓRIA/m.test(raw)){
-  const lines=raw.split(/\\r?\\n/);
+  const lines=raw.split(/\r?\n/);
   const machineLine=lines.find(line=>line.startsWith("Stroj:"));
   const machine=machineLine?machineLine.slice(6).trim():"";
-  const blocks=raw.split(/(?:^|\\n)ZÁZNAM \\d+\\s*\\n/).slice(1);
+  const blocks=raw.split(/(?:^|\n)ZÁZNAM \d+\s*\n/).slice(1);
   const records=blocks.map(block=>{
    const fields={};
-   block.split(/\\r?\\n/).forEach(line=>{
+   block.split(/\r?\n/).forEach(line=>{
     const pos=line.indexOf(":");
     if(pos<0)return;
-    const key=line.slice(0,pos).trim();
-    const value=line.slice(pos+1).trim();
-    fields[key]=value;
+    fields[line.slice(0,pos).trim()]=line.slice(pos+1).trim();
    });
-   const currentMatch=(fields["Stav"]||"").match(/^(.*?)\\s+(KM|MTH)$/i);
-   const nextMatch=(fields["Pri ďalšom servise"]||"").match(/^(.*?)\\s+(KM|MTH)$/i);
+   const currentMatch=(fields["Stav"]||"").match(/^(.*?)\s+(KM|MTH)$/i);
+   const nextMatch=(fields["Pri ďalšom servise"]||"").match(/^(.*?)\s+(KM|MTH)$/i);
    const unit=((currentMatch&&currentMatch[2])||(nextMatch&&nextMatch[2])||"KM").toUpperCase();
    return {
     date:parseReadableDate(fields["Dátum"]),
@@ -647,8 +642,6 @@ function parsePayload(raw){
   });
   return {app:"ServisnyAsistent",version:3,machine,records};
  }
-
- // Podpora obyčajného textového QR z iných aplikácií.
  return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim()||"Neznámy stroj",records:[{date:"",current:"",description:raw,nextDate:"",nextKm:""}]};
 }
 function loadQR(raw){
