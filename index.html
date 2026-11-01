@@ -31,6 +31,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .paper-manual-row label{font-size:12px}
 .paper-manual-row input{margin-top:4px;padding:8px}
 .paper-manual button{width:100%}
+.printer-extra-info{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);text-align:left;font-size:14px}
+.printer-extra-info>.status,.media-details>.status{margin:5px 0 10px;text-align:left}
+.media-details{border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px;background:#fbfcfd}
+.media-details>b{font-size:13px;display:block}
+.media-details .status{font-size:12px;line-height:1.45;overflow-wrap:anywhere;white-space:pre-wrap}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.actions .full{grid-column:1/-1}
 .status{font-size:13px;color:var(--muted);margin-top:9px;white-space:pre-wrap}
 .unit-choice{display:flex;gap:14px;flex-wrap:wrap;padding:9px 10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff}
@@ -124,6 +129,22 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
    <label for="manualPaperHeight">Výška (mm)<input id="manualPaperHeight" type="number" min="10" max="200" step="0.1" value="90"></label>
   </div>
   <button class="light" type="button" onclick="applyManualPaperSize()">Použiť ručný rozmer</button>
+ </div>
+ <div class="printer-extra-info">
+  <b>Ďalšie údaje z tlačiarne</b>
+  <div id="printerDetails" class="status">Údaje sa načítajú po pripojení tlačiarne.</div>
+  <div class="media-details">
+   <b>Štítok / papier</b>
+   <div id="labelRfidDetails" class="status">RFID štítku zatiaľ nenačítané.</div>
+   <b>Farba štítku</b>
+   <div id="labelColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
+  </div>
+  <div class="media-details">
+   <b>Ribon / páska</b>
+   <div id="ribbonRfidDetails" class="status">RFID ribonu zatiaľ nenačítané.</div>
+   <b>Farba ribonu</b>
+   <div id="ribbonColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
+  </div>
  </div>
 </div>
 </section>
@@ -254,6 +275,11 @@ function setPrinterState(connected,message){
   printerProtocolVersion=null;
   paperSize=null;
   $('paperStatus').textContent="Tlačiareň nie je pripojená. Rozmer štítku nie je načítaný.";
+  $('printerDetails').textContent="Údaje sa načítajú po pripojení tlačiarne.";
+  $('labelRfidDetails').textContent="RFID štítku zatiaľ nenačítané.";
+  $('ribbonRfidDetails').textContent="RFID ribonu zatiaľ nenačítané.";
+  $('labelColorDetails').textContent="Údaj o farbe nie je dostupný.";
+  $('ribbonColorDetails').textContent="Údaj o farbe nie je dostupný.";
  }
 }
 function readPrinterFrame(event){
@@ -368,6 +394,83 @@ async function detectPaperSize(){
   setPaperStatus("Automatické čítanie rozmeru zlyhalo: "+(error?.message||String(error))+" Ručný rozmer môžeš nastaviť nižšie.");
  }
 }
+function decodeRfidInfo(data){
+ if(!data||data.length===1) return {tagPresent:false};
+ if(data.length<20) throw new Error("RFID odpoveď je neúplná ("+data.length+" bajtov).");
+ let p=0;
+ const uuid=data.slice(p,p+8).map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase();p+=8;
+ const readString=()=>{
+  if(p>=data.length) throw new Error("RFID textový údaj je neúplný.");
+  const length=data[p++];
+  if(p+length>data.length) throw new Error("RFID textový údaj má chybnú dĺžku.");
+  const bytes=Uint8Array.from(data.slice(p,p+length));p+=length;
+  try{return new TextDecoder("utf-8").decode(bytes).replace(/\0/g,"").trim();}
+  catch(e){return Array.from(bytes).map(v=>String.fromCharCode(v)).join("").trim();}
+ };
+ const barcode=readString();
+ const serial=readString();
+ if(p+5>data.length) throw new Error("RFID počítadlá sú neúplné.");
+ const total=readU16BE(data,p);p+=2;
+ const used=readU16BE(data,p);p+=2;
+ const type=data[p++];
+ let capacity=null;
+ if(p+2<=data.length){capacity=readU16BE(data,p);p+=2;}
+ const uuid2=p+8<=data.length?data.slice(p,p+8).map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase():"";
+ return {tagPresent:true,uuid,uuid2,barcode,serial,total,used,type,capacity};
+}
+function labelTypeName(type){
+ return ({1:"Etikety s medzerou",2:"Čierna značka",3:"Súvislý papier",4:"Perforované etikety",5:"Transparentné etikety",6:"PVC štítok",10:"Čierna značka s medzerou",11:"Zmršťovacia bužírka"})[type]||("Neznámy typ ("+type+")");
+}
+function rfidInfoHtml(info){
+ if(!info||!info.tagPresent) return "RFID čip nebol načítaný alebo nie je prítomný.";
+ const remaining=info.total>=0?Math.max(0,info.total-info.used):null;
+ const rows=[
+  ["RFID","Načítané"],
+  ["Typ média",labelTypeName(info.type)],
+  ["Čiarový kód",info.barcode||"Nie je zapísaný"],
+  ["Sériové číslo",info.serial||"Nie je zapísané"],
+  ["Spotrebované / celkom",info.total>=0?info.used+" / "+info.total:"Neznáme"],
+  ["Zostáva kusov",remaining===null?"Neznáme":String(remaining)],
+  ["Kapacita RFID",info.capacity===null?"Nie je uvedená":String(info.capacity)],
+  ["ID čipu",info.uuid]
+ ];
+ return rows.map(([name,value])=>"<b>"+escapeHtml(name)+":</b> "+escapeHtml(value)).join("<br>");
+}
+async function detectOtherPrinterInfo(){
+ $('printerDetails').textContent="Načítavam informácie o tlačiarni…";
+ $('labelRfidDetails').textContent="Načítavam RFID štítku…";
+ $('ribbonRfidDetails').textContent="Načítavam RFID ribonu…";
+
+ let label=null,ribbon=null,printerMeta=null,modelId=null;
+ try{const r=await requestPrinterResponse(0x1a,[0x01],0x1b,3000);label=decodeRfidInfo(r.data);}
+ catch(e){$('labelRfidDetails').textContent="RFID štítku sa nepodarilo načítať: "+(e?.message||String(e));}
+ try{const r=await requestPrinterResponse(0x1c,[0x01],0x1d,3000);ribbon=decodeRfidInfo(r.data);}
+ catch(e){$('ribbonRfidDetails').textContent="RFID ribonu sa nepodarilo načítať: "+(e?.message||String(e));}
+ try{const r=await requestPrinterResponse(0xdc,[0x03],0xdf,3000);printerMeta=r.data;}
+ catch(e){}
+ try{const r=await requestPrinterResponse(0x40,[0x08],0x48,2000);modelId=r.data.length===1?(r.data[0]<<8):readU16BE(r.data,0);}
+ catch(e){}
+
+ if(label) $('labelRfidDetails').innerHTML=rfidInfoHtml(label);
+ if(ribbon) $('ribbonRfidDetails').innerHTML=rfidInfoHtml(ribbon);
+
+ // Bežné RFID odpovede neobsahujú samostatné pole s farbou média.
+ $('labelColorDetails').textContent="Farba nie je uvedená v štandardných RFID údajoch štítku.";
+ $('ribbonColorDetails').textContent="Farba nie je uvedená v štandardných RFID údajoch ribonu.";
+
+ const details=[];
+ if(modelId!==null) details.push("ID modelu: "+modelId);
+ if(printerMeta&&printerMeta.length===10){
+  const hw=(printerMeta[0]+printerMeta[1]/100).toFixed(2);
+  const fw=(printerMeta[2]+printerMeta[3]/100).toFixed(2);
+  const headWidth=readU16BE(printerMeta,4);
+  const dpi=printerMeta[6]===3?300:printerMeta[6]===2?203:"Neznáme";
+  details.push("Hardvér: "+hw,"Firmvér: "+fw,"Šírka tlačovej hlavy: "+headWidth+" bodov","Rozlíšenie tlačovej hlavy: "+dpi+" DPI","RFID podpora: "+(printerMeta[8]?"áno":"nie"),"Zápis RFID: "+(printerMeta[9]?"áno":"nie"));
+ }else{
+  details.push("Verziu firmvéru, hardvéru a údaje o tlačovej hlave sa nepodarilo načítať.");
+ }
+ $('printerDetails').textContent=details.join("\n");
+}
 async function writePrinter(data){
  if(!printerTx) throw new Error("Tlačiareň nie je pripojená.");
  await new Promise(resolve=>setTimeout(resolve,10));
@@ -447,6 +550,7 @@ async function pripojit(){
   }
   setPrinterState(true,"Pripojená: "+(printerDevice.name||"Niimbot M2")+" (protokol "+(printerProtocolVersion||"nezistený")+")");
   await detectPaperSize();
+  await detectOtherPrinterInfo();
  }catch(error){
   printerTx=null;printerRx=null;
   if(printerDevice?.gatt?.connected) printerDevice.gatt.disconnect();
