@@ -54,7 +54,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 #scanner{display:none;margin-top:12px}.record{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0}
 .record strong{display:block;margin-bottom:4px}.small{font-size:12px;color:var(--muted)}
 .history-machine{font-size:14px;font-weight:bold;margin:0 0 10px;color:#344054}
-.label-preview{width:50mm;height:30mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
+.label-preview{width:30mm;height:50mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
 .label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1mm;overflow-wrap:anywhere}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}
 .label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}
 .service-section-title{display:block;text-align:center;font-weight:bold}
@@ -82,15 +82,15 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .preview-actions{display:flex;gap:9px;margin-top:12px}.preview-actions button{flex:1}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.full{grid-column:auto}.actions .full{grid-column:auto}.preview-dialog{padding:12px}.preview-actions{flex-direction:column}}
 @media print{
- @page{size:50mm 30mm;margin:0}
- html,body{width:50mm;height:30mm;margin:0!important;padding:0!important;background:white!important}
- main{width:50mm;height:30mm;max-width:none;margin:0;padding:0}
+ @page{size:30mm 50mm;margin:0}
+ html,body{width:30mm;height:50mm;margin:0!important;padding:0!important;background:white!important}
+ main{width:30mm;height:50mm;max-width:none;margin:0;padding:0}
  main>*:not(#previewModal){display:none!important}
- #previewModal{display:block!important;position:static!important;inset:auto!important;width:50mm;height:30mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
- .preview-dialog{display:block!important;width:50mm!important;height:30mm!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important}
+ #previewModal{display:block!important;position:static!important;inset:auto!important;width:30mm;height:50mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
+ .preview-dialog{display:block!important;width:30mm!important;height:50mm!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important}
  .preview-dialog-head,.preview-actions{display:none!important}
- .preview-stage{display:block!important;width:50mm;height:30mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
- #printArea{display:flex!important;flex-direction:column!important;box-sizing:border-box!important;width:50mm;height:30mm;margin:0;padding:2mm;border:0;overflow:hidden}
+ .preview-stage{display:block!important;width:30mm;height:50mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
+ #printArea{display:flex!important;flex-direction:column!important;box-sizing:border-box!important;width:30mm;height:50mm;margin:0;padding:2mm;border:0;overflow:hidden}
  .label-header{font-size:6pt!important;line-height:0.95!important;margin:0 0 0.35mm!important}
  .label-header>div{margin:0!important;padding:0!important;line-height:0.95!important}
  .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:6pt!important;line-height:0.9!important}
@@ -201,7 +201,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel">
 <h2>3. Náhľad a tlač štítku</h2>
 <div class="actions">
-<button class="preview-launch full" onclick="openPreview()">👁 Náhľad štítku 50 × 30 mm</button>
+<button class="preview-launch full" onclick="openPreview()">👁 Náhľad štítku 30 × 50 mm</button>
 <button class="light" onclick="clearForm()">Vyčistiť formulár</button>
 
 </div>
@@ -216,7 +216,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 
 <div id="previewModal" onclick="if(event.target===this)closePreview()">
 <div class="preview-dialog" role="dialog" aria-modal="true" aria-labelledby="previewHeading">
-<div class="preview-dialog-head"><h2 id="previewHeading">Náhľad štítku 50 × 30 mm</h2><button class="light" type="button" onclick="closePreview()" aria-label="Zavrieť náhľad">✕</button></div>
+<div class="preview-dialog-head"><h2 id="previewHeading">Náhľad štítku 30 × 50 mm</h2><button class="light" type="button" onclick="closePreview()" aria-label="Zavrieť náhľad">✕</button></div>
 <div class="preview-stage"><section id="printArea" class="label-preview">
 <div class="label-header">
 <h3 id="labelTitle">SERVISCENTRUM NAHALKA</h3>
