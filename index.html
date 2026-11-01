@@ -121,20 +121,12 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <b>Údaje o tlačiarni</b>
  <div id="printerDetails" class="status">Údaje sa načítajú po pripojení tlačiarne.</div>
  <div class="media-details">
-  <b>Štítok / papier</b>
-  <div id="labelRfidDetails" class="status">RFID štítku zatiaľ nenačítané.</div>
+  <b>Rozmer štítku</b>
+  <div id="paperSizeStatus" class="status">Rozmer sa načíta po pripojení tlačiarne.</div>
   <div class="usage-counters">
    <div><span>Spotrebované / celkom</span><strong id="labelUsage">— / —</strong></div>
    <div><span>Zostáva kusov</span><strong id="labelRemaining">—</strong></div>
   </div>
-  <b>Farba štítku</b>
-  <div id="labelColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
- </div>
- <div class="media-details">
-  <b>Ribon / páska</b>
-  <div id="ribbonRfidDetails" class="status">RFID ribonu zatiaľ nenačítané.</div>
-  <b>Farba ribonu</b>
-  <div id="ribbonColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
  </div>
 </div>
 </section>
@@ -263,12 +255,9 @@ function setPrinterState(connected,message){
  if(!connected){
   printerProtocolVersion=null;
   $('printerDetails').textContent="Údaje sa načítajú po pripojení tlačiarne.";
+  $('paperSizeStatus').textContent="Tlačiareň nie je pripojená.";
   $('labelUsage').textContent="— / —";
   $('labelRemaining').textContent="—";
-  $('labelRfidDetails').textContent="RFID štítku zatiaľ nenačítané.";
-  $('ribbonRfidDetails').textContent="RFID ribonu zatiaľ nenačítané.";
-  $('labelColorDetails').textContent="Údaj o farbe nie je dostupný.";
-  $('ribbonColorDetails').textContent="Údaj o farbe nie je dostupný.";
  }
 }
 function readPrinterFrame(event){
@@ -344,85 +333,54 @@ function readU16BE(data,index){return (data[index]<<8)|data[index+1];}
 function decodeRfidInfo(data){
  if(!data||data.length===1) return {tagPresent:false};
  if(data.length<15) throw new Error("RFID odpoveď je neúplná ("+data.length+" bajtov).");
- let p=0;
- const uuid=data.slice(p,p+8).map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase();p+=8;
+ let p=8;
  const readString=()=>{
   if(p>=data.length) throw new Error("RFID textový údaj je neúplný.");
   const length=data[p++];
   if(p+length>data.length) throw new Error("RFID textový údaj má chybnú dĺžku.");
   const bytes=Uint8Array.from(data.slice(p,p+length));p+=length;
-  try{return new TextDecoder("utf-8").decode(bytes).replace(/\0/g,"").trim();}
-  catch(e){return Array.from(bytes).map(v=>String.fromCharCode(v)).join("").trim();}
+  return new TextDecoder("utf-8").decode(bytes).replace(/\0/g,"").trim();
  };
- const barcode=readString();
- const serial=readString();
+ const barcode=readString(),serial=readString();
  if(p+5>data.length) throw new Error("RFID počítadlá sú neúplné.");
  const total=readU16BE(data,p);p+=2;
  const used=readU16BE(data,p);p+=2;
- const type=data[p++];
- let capacity=null;
- if(p+2<=data.length){capacity=readU16BE(data,p);p+=2;}
- const uuid2=p+8<=data.length?data.slice(p,p+8).map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase():"";
- return {tagPresent:true,uuid,uuid2,barcode,serial,total,used,type,capacity};
-}
-function labelTypeName(type){
- return ({1:"Etikety s medzerou",2:"Čierna značka",3:"Súvislý papier",4:"Perforované etikety",5:"Transparentné etikety",6:"PVC štítok",10:"Čierna značka s medzerou",11:"Zmršťovacia bužírka"})[type]||("Neznámy typ ("+type+")");
-}
-function rfidInfoHtml(info){
- if(!info||!info.tagPresent) return "RFID čip nebol načítaný alebo nie je prítomný.";
- const remaining=info.total>=0?Math.max(0,info.total-info.used):null;
- const rows=[
-  ["RFID","Načítané"],
-  ["Typ média",labelTypeName(info.type)],
-  ["Čiarový kód",info.barcode||"Nie je zapísaný"],
-  ["Sériové číslo",info.serial||"Nie je zapísané"],
-  ["Spotrebované / celkom",info.total>=0?info.used+" / "+info.total:"Neznáme"],
-  ["Zostáva kusov",remaining===null?"Neznáme":String(remaining)],
-  ["Kapacita RFID",info.capacity===null?"Nie je uvedená":String(info.capacity)],
-  ["ID čipu",info.uuid]
- ];
- return rows.map(([name,value])=>"<b>"+escapeHtml(name)+":</b> "+escapeHtml(value)).join("<br>");
+ return {tagPresent:true,total,used,barcode,serial};
 }
 async function detectOtherPrinterInfo(){
  $('printerDetails').textContent="Načítavam informácie o tlačiarni…";
- $('labelRfidDetails').textContent="Načítavam RFID štítku…";
- $('ribbonRfidDetails').textContent="Načítavam RFID ribonu…";
-
- let label=null,ribbon=null,printerMeta=null,modelId=null;
- try{const r=await requestPrinterResponse(0x1a,[0x01],0x1b,3000);label=decodeRfidInfo(r.data);}
- catch(e){$('labelRfidDetails').textContent="RFID štítku sa nepodarilo načítať: "+(e?.message||String(e));}
- try{const r=await requestPrinterResponse(0x1c,[0x01],0x1d,3000);ribbon=decodeRfidInfo(r.data);}
- catch(e){$('ribbonRfidDetails').textContent="RFID ribonu sa nepodarilo načítať: "+(e?.message||String(e));}
- try{const r=await requestPrinterResponse(0xdc,[0x03],0xdf,3000);printerMeta=r.data;}
- catch(e){}
- try{const r=await requestPrinterResponse(0x40,[0x08],0x48,2000);modelId=r.data.length===1?(r.data[0]<<8):readU16BE(r.data,0);}
- catch(e){}
-
- if(label){
-  $('labelRfidDetails').innerHTML=rfidInfoHtml(label);
-  $('labelUsage').textContent=label.total>=0?label.used+" / "+label.total:"Neznáme";
-  $('labelRemaining').textContent=label.total>=0?String(Math.max(0,label.total-label.used)):"Neznáme";
- }else{
-  $('labelUsage').textContent="— / —";
-  $('labelRemaining').textContent="Neznáme";
+ $('paperSizeStatus').textContent="Načítavam rozmer štítku z RFID…";
+ $('labelUsage').textContent="— / —";
+ $('labelRemaining').textContent="—";
+ let label=null,printerMeta=null,modelId=null;
+ try{const r=await requestPrinterResponse(0x1a,[0x01],0x1b,3000);label=decodeRfidInfo(r.data);}catch(e){}
+ try{const r=await requestPrinterResponse(0xdc,[0x03],0xdf,3000);printerMeta=r.data;}catch(e){}
+ try{const r=await requestPrinterResponse(0x40,[0x08],0x48,2500);modelId=r.data.length===1?(r.data[0]<<8):readU16BE(r.data,0);}catch(e){}
+ try{
+  const r=await requestPrinterResponse(0x59,[0x01],0x69,4000);
+  if(r.data.length!==18) throw new Error("RFID odpoveď má "+r.data.length+" bajtov.");
+  const gapHeight=readU16BE(r.data,5)/10;
+  const totalHeight=readU16BE(r.data,7)/10;
+  const width=readU16BE(r.data,11)/10;
+  const height=modelId===785?totalHeight-gapHeight:totalHeight;
+  if(width<10||width>100||height<10||height>200) throw new Error("Neplatné rozmery "+width+" × "+height+" mm.");
+  $('paperSizeStatus').textContent=width+" × "+height+" mm";
+ }catch(e){
+  $('paperSizeStatus').textContent="Rozmer sa nepodarilo načítať z RFID: "+(e?.message||String(e));
  }
- if(ribbon) $('ribbonRfidDetails').innerHTML=rfidInfoHtml(ribbon);
-
- // Bežné RFID odpovede neobsahujú samostatné pole s farbou média.
- $('labelColorDetails').textContent="Farba nie je uvedená v štandardných RFID údajoch štítku.";
- $('ribbonColorDetails').textContent="Farba nie je uvedená v štandardných RFID údajoch ribonu.";
-
+ if(label&&label.tagPresent&&label.total>=0&&label.used>=0){
+  $('labelUsage').textContent=label.used+" / "+label.total;
+  $('labelRemaining').textContent=String(Math.max(0,label.total-label.used));
+ }
  const details=[];
- if(modelId!==null) details.push("ID modelu: "+modelId);
+ if(modelId!==null)details.push("ID modelu: "+modelId);
  if(printerMeta&&printerMeta.length===10){
   const hw=(printerMeta[0]+printerMeta[1]/100).toFixed(2);
   const fw=(printerMeta[2]+printerMeta[3]/100).toFixed(2);
   const headWidth=readU16BE(printerMeta,4);
   const dpi=printerMeta[6]===3?300:printerMeta[6]===2?203:"Neznáme";
-  details.push("Hardvér: "+hw,"Firmvér: "+fw,"Šírka tlačovej hlavy: "+headWidth+" bodov","Rozlíšenie tlačovej hlavy: "+dpi+" DPI","RFID podpora: "+(printerMeta[8]?"áno":"nie"),"Zápis RFID: "+(printerMeta[9]?"áno":"nie"));
- }else{
-  details.push("Verziu firmvéru, hardvéru a údaje o tlačovej hlave sa nepodarilo načítať.");
- }
+  details.push("Hardvér: "+hw,"Firmvér: "+fw,"Šírka tlačovej hlavy: "+headWidth+" bodov","Rozlíšenie: "+dpi+" DPI","RFID podpora: "+(printerMeta[8]?"áno":"nie"),"Zápis RFID: "+(printerMeta[9]?"áno":"nie"));
+ }else details.push("Technické údaje tlačiarne sa nepodarilo načítať.");
  $('printerDetails').textContent=details.join("\n");
 }
 async function writePrinter(data){
