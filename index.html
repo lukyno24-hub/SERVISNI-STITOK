@@ -353,7 +353,9 @@ async function detectPaperSize(){
   const gapHeight=readU16BE(info.data,5)/10;
   const totalHeight=readU16BE(info.data,7)/10;
   const width=readU16BE(info.data,11)/10;
-  const height=totalHeight;
+  // Na Niimbot M2 RFID hlási celkový posun vrátane medzery medzi štítkami.
+  // Skutočná výška jednej etikety je preto celková výška mínus medzera.
+  const height=totalHeight-gapHeight;
   if(width<10||width>100||height<10||height>200){
    const raw=info.data.map(v=>v.toString(16).padStart(2,"0")).join(" ");
    throw new Error("Dekódované rozmery: "+width+" × "+height+" mm. Odpoveď RFID (HEX): "+raw);
@@ -361,7 +363,7 @@ async function detectPaperSize(){
   paperSize={width,height,gapHeight,paperType:info.data[4],source:"rfid"};
   $('manualPaperWidth').value=width;
   $('manualPaperHeight').value=height;
-  setPaperStatus("Automaticky rozpoznaný štítok: "+width+" × "+height+" mm (RFID)."+(gapHeight?" Medzera medzi štítkami: "+gapHeight+" mm.":""));
+  setPaperStatus("Automaticky rozpoznaný štítok: "+width+" × "+height+" mm (RFID)."+(gapHeight?" Medzera medzi štítkami: "+gapHeight+" mm. Celkový posun kotúča: "+totalHeight+" mm.":""));
  }catch(error){
   setPaperStatus("Automatické čítanie rozmeru zlyhalo: "+(error?.message||String(error))+" Ručný rozmer môžeš nastaviť nižšie.");
  }
