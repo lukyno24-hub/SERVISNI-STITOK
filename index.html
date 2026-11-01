@@ -227,8 +227,10 @@ let records=[], activeScanner=null, currentLabel=null;
 let printerDevice=null, printerTx=null, printerRx=null;
 let printerProtocolVersion=null;
 let paperSize=null;
+let printerRxBuffer=new Uint8Array(0);
 let printerResponseWaiters=new Map();
 const printerUuids=[
+ "e7810a71-73ae-499d-8c15-faa9aef0c3f2",
  "0000fee7-0000-1000-8000-00805f9b34fb",
  "0000e7fe-0000-1000-8000-00805f9b34fb",
  "0000ff00-0000-1000-8000-00805f9b34fb",
@@ -256,21 +258,50 @@ function setPrinterState(connected,message){
 }
 function readPrinterFrame(event){
  const view=event.target.value;
- const bytes=Array.from(new Uint8Array(view.buffer,view.byteOffset,view.byteLength));
- for(let i=0;i<=bytes.length-7;i++){
-  if(bytes[i]!==0x55||bytes[i+1]!==0x55) continue;
-  const len=bytes[i+3], total=len+7;
-  if(i+total>bytes.length) continue;
-  if(bytes[i+total-2]!==0xaa||bytes[i+total-1]!==0xaa) continue;
-  const command=bytes[i+2];
-  const data=bytes.slice(i+4,i+4+len);
+ const incoming=new Uint8Array(view.buffer,view.byteOffset,view.byteLength);
+ const joined=new Uint8Array(printerRxBuffer.length+incoming.length);
+ joined.set(printerRxBuffer);
+ joined.set(incoming,printerRxBuffer.length);
+ printerRxBuffer=joined;
+
+ while(printerRxBuffer.length>=2){
+  let start=-1;
+  for(let i=0;i<printerRxBuffer.length-1;i++){
+   if(printerRxBuffer[i]===0x55&&printerRxBuffer[i+1]===0x55){start=i;break;}
+  }
+  if(start<0){
+   printerRxBuffer=printerRxBuffer[printerRxBuffer.length-1]===0x55?new Uint8Array([0x55]):new Uint8Array(0);
+   return;
+  }
+  if(start>0) printerRxBuffer=printerRxBuffer.slice(start);
+  if(printerRxBuffer.length<4) return;
+
+  const dataLength=printerRxBuffer[3];
+  const packetLength=dataLength+7;
+  if(printerRxBuffer.length<packetLength) return;
+
+  const frame=printerRxBuffer.slice(0,packetLength);
+  if(frame[packetLength-2]!==0xaa||frame[packetLength-1]!==0xaa){
+   printerRxBuffer=printerRxBuffer.slice(1);
+   continue;
+  }
+
+  const command=frame[2];
+  const data=Array.from(frame.slice(4,4+dataLength));
+  let checksum=command^dataLength;
+  for(const value of data) checksum^=value;
+  if(checksum!==frame[4+dataLength]){
+   printerRxBuffer=printerRxBuffer.slice(1);
+   continue;
+  }
+
+  printerRxBuffer=printerRxBuffer.slice(packetLength);
   const waiter=printerResponseWaiters.get(command);
   if(waiter){
    clearTimeout(waiter.timer);
    printerResponseWaiters.delete(command);
    waiter.resolve({command,data});
   }
-  i+=total-1;
  }
 }
 function waitForPrinterResponse(command,timeout=2500){
@@ -294,7 +325,7 @@ async function requestPrinterResponse(command,data,responseCommand,timeout=2500)
  }
  return await responsePromise;
 }
-function readU16LE(data,index){return data[index]|(data[index+1]<<8);}
+function readU16BE(data,index){return (data[index]<<8)|data[index+1];}
 function setPaperStatus(message){$('paperStatus').textContent=message;}
 function applyManualPaperSize(){
  const width=Number($('manualPaperWidth').value);
@@ -308,35 +339,34 @@ function applyManualPaperSize(){
 }
 async function detectPaperSize(){
  paperSize=null;
- setPaperStatus("Zisťujem verziu protokolu tlačiarne…");
+ setPaperStatus("Čítam informácie o vloženom RFID kotúči…");
  try{
-  const status=await requestPrinterResponse(0xa5,[0x01],0xb5,3000);
-  if(status.data.length<13) throw new Error("Odpoveď s verziou protokolu nemá očakávanú dĺžku.");
-  const versionCode=status.data[11]*100+status.data[12];
-  printerProtocolVersion=versionCode>=302?5:versionCode>=300?4:versionCode>=204?3:0;
-  if(printerProtocolVersion<4){
-   setPaperStatus("Tlačiareň má protokol "+(printerProtocolVersion||"neznámy")+". Automatické zisťovanie rozmeru vyžaduje protokol 4 alebo novší. Použi ručný výber.");
-   return;
+  // NiimBlueLib používa príkaz 0x59 a odpoveď 0x69.
+  const info=await requestPrinterResponse(0x59,[0x01],0x69,4000);
+  if(info.data.length!==18){
+   throw new Error(info.data.length===1
+    ?"Tlačiareň nevrátila údaje o rozmere z RFID kotúča."
+    :"Odpoveď o papieri má neznámy formát ("+info.data.length+" bajtov).");
   }
-  setPaperStatus("Protokol "+printerProtocolVersion+" podporuje zisťovanie papiera. Čítam RFID kotúča…");
-  const info=await requestPrinterResponse(0x59,[0x01],0x69,3500);
-  if(info.data.length!==18) throw new Error(info.data.length===1?"RFID kotúča neobsahuje čitateľné informácie o rozmere.":"Odpoveď RFID má neočakávaný formát ("+info.data.length+" bajtov).");
-  const gapHeight=readU16LE(info.data,5)/10;
-  const totalHeight=readU16LE(info.data,7)/10;
-  const width=readU16LE(info.data,11)/10;
+  // Protokol Niimbot ukladá tieto 16-bitové hodnoty v poradí big-endian.
+  const gapHeight=readU16BE(info.data,5)/10;
+  const totalHeight=readU16BE(info.data,7)/10;
+  const width=readU16BE(info.data,11)/10;
   const height=totalHeight;
-  if(width<10||width>100||height<10||height>200) throw new Error("Načítané rozmery sú mimo očakávaného rozsahu.");
-  const type=info.data[4];
-  paperSize={width,height,gapHeight,paperType:type,source:"rfid"};
+  if(width<10||width>100||height<10||height>200){
+   throw new Error("Tlačiareň vrátila neplatné rozmery: "+width+" × "+height+" mm.");
+  }
+  paperSize={width,height,gapHeight,paperType:info.data[4],source:"rfid"};
   $('manualPaperWidth').value=width;
   $('manualPaperHeight').value=height;
   setPaperStatus("Automaticky rozpoznaný štítok: "+width+" × "+height+" mm (RFID)."+(gapHeight?" Medzera medzi štítkami: "+gapHeight+" mm.":""));
  }catch(error){
-  setPaperStatus("Rozmer sa nepodarilo automaticky načítať: "+(error?.message||String(error))+" Použi ručné zadanie nižšie.");
+  setPaperStatus("Automatické čítanie rozmeru zlyhalo: "+(error?.message||String(error))+" Ručný rozmer môžeš nastaviť nižšie.");
  }
 }
 async function writePrinter(data){
  if(!printerTx) throw new Error("Tlačiareň nie je pripojená.");
+ await new Promise(resolve=>setTimeout(resolve,10));
  if(printerTx.properties.writeWithoutResponse && printerTx.writeValueWithoutResponse){
   await printerTx.writeValueWithoutResponse(data);
  }else if(printerTx.writeValueWithResponse){
@@ -369,6 +399,7 @@ async function pripojit(){
     try{printerRx.removeEventListener('characteristicvaluechanged',readPrinterFrame);}catch(e){}
    }
    printerRx=null;
+   printerRxBuffer=new Uint8Array(0);
    printerResponseWaiters.forEach(waiter=>{clearTimeout(waiter.timer);waiter.reject(new Error("Spojenie bolo prerušené."));});
    printerResponseWaiters.clear();
    setPrinterState(false,"Spojenie s tlačiarňou bolo prerušené.");
@@ -381,16 +412,36 @@ async function pripojit(){
   }
   if(!service) throw new Error("Tlačiareň neposkytla známu Bluetooth službu. Skontroluj, či ide o Niimbot M2.");
   const characteristics=await service.getCharacteristics();
-  printerTx=characteristics.find(ch=>ch.properties.write||ch.properties.writeWithoutResponse);
-  printerRx=characteristics.find(ch=>ch.properties.notify||ch.properties.indicate)||null;
+  // Preferujeme jeden kanál, ktorý podporuje zápis aj notifikácie – takto ho vyberá aj NiimBlueLib.
+  const duplex=characteristics.find(ch=>ch.properties.notify&&(ch.properties.writeWithoutResponse||ch.properties.write));
+  printerTx=duplex||characteristics.find(ch=>ch.properties.writeWithoutResponse||ch.properties.write);
+  printerRx=duplex||characteristics.find(ch=>ch.properties.notify||ch.properties.indicate)||null;
   if(!printerTx) throw new Error("V Bluetooth službe sa nenašiel kanál na odosielanie dát.");
   if(!printerRx) throw new Error("Tlačiareň nemá oznamovací Bluetooth kanál; nedá sa načítať jej odpoveď.");
   await printerRx.startNotifications();
   printerRx.addEventListener('characteristicvaluechanged',readPrinterFrame);
-  await writePrinter(printerPacket(0x01,[0x01]));
-  await new Promise(resolve=>setTimeout(resolve,80));
-  await writePrinter(printerPacket(0x40,[0x01]));
-  setPrinterState(true,"Pripojená: "+(printerDevice.name||"Niimbot M2"));
+  printerRxBuffer=new Uint8Array(0);
+
+  // Správne prihlásenie do protokolu Niimbot: Connect 0xC1 -> Connect response 0xC2.
+  setPrinterState(false,"Bluetooth je spojený. Dohadujem protokol s tlačiarňou…");
+  const connectResponse=await requestPrinterResponse(0xc1,[0x01],0xc2,4500);
+  const connectResult=connectResponse.data[0];
+  if(connectResult===0||connectResult===90||connectResult===undefined){
+   throw new Error("Tlačiareň odmietla protokolové pripojenie (kód "+connectResult+").");
+  }
+  printerProtocolVersion=connectResult===2?1:0;
+  if(connectResult===3){
+   try{
+    const status=await requestPrinterResponse(0xa5,[0x01],0xb5,3000);
+    if(status.data.length>=13){
+     const versionCode=status.data[11]*100+status.data[12];
+     printerProtocolVersion=versionCode>=302?5:versionCode>=300?4:versionCode>=204?3:0;
+    }
+   }catch(e){
+    printerProtocolVersion=0;
+   }
+  }
+  setPrinterState(true,"Pripojená: "+(printerDevice.name||"Niimbot M2")+" (protokol "+(printerProtocolVersion||"nezistený")+")");
   await detectPaperSize();
  }catch(error){
   printerTx=null;printerRx=null;
