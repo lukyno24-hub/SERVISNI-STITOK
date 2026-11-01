@@ -42,6 +42,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .period-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff}
 .period-choice label{display:flex;align-items:center;gap:5px;font-size:13px;margin:0;white-space:nowrap}
 .period-choice input{width:15px;height:15px;margin:0;accent-color:var(--green)}
+.oil-grade-choice{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px;border:1px solid #cfd4dc;border-radius:7px;background:#fff;margin-bottom:8px}
+.oil-grade-choice label{display:flex;align-items:center;gap:5px;font-size:13px;margin:0;white-space:nowrap}
+.oil-grade-choice input{width:15px;height:15px;margin:0;accent-color:var(--green)}
 .next-date-result{margin-top:8px;font-size:13px;color:#344054}
 .next-date-result strong{font-size:14px;color:var(--green)}
 .service-picker{min-width:0}
@@ -157,19 +160,17 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <details class="service-group">
 <summary>Výmena oleja</summary>
 <div class="service-options">
-<label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej" id="oilCheck"> Olej</label>
-<div class="service-extra"><label for="oilType">Viskozita oleja</label><select id="oilType">
-<option value="">Vyber typ oleja</option>
-<option value="0W-20">0W-20</option>
-<option value="0W-30">0W-30</option>
-<option value="0W-40">0W-40</option>
-<option value="5W-20">5W-20</option>
-<option value="5W-30">5W-30</option>
-<option value="5W-40">5W-40</option>
-<option value="10W-30">10W-30</option>
-<option value="10W-40">10W-40</option>
-<option value="15W-40">15W-40</option>
-</select></div>
+<div class="oil-grade-choice">
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 0W-20"> 0W-20</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 0W-30"> 0W-30</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 0W-40"> 0W-40</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 5W-20"> 5W-20</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 5W-30"> 5W-30</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 5W-40"> 5W-40</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 10W-30"> 10W-30</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 10W-40"> 10W-40</label>
+ <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Olej 15W-40"> 15W-40</label>
+</div>
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter oleja"> Filter oleja</label>
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter vzduchu"> Filter vzduchu</label>
 <label><input type="checkbox" name="servicePart" data-group="Výmena oleja" value="Filter paliva"> Filter paliva</label>
@@ -632,7 +633,6 @@ function buildServiceDescription(){
   const group=el.dataset.group;
   if(!groups.has(group)) groups.set(group,[]);
   let item=el.value;
-  if(el.id==="oilCheck" && $('oilType').value.trim()) item+= " ("+$('oilType').value.trim()+")";
   if(el.id==="fluidCheck") item+= " ("+$('fluidType').value+")";
   groups.get(group).push(item);
  });
@@ -729,7 +729,6 @@ function clearForm(){
  $('nextDateDisplay').textContent="Vyber obdobie";
  $('nextKm').value="";
  document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
- $('oilType').value="";
  $('fluidType').value="DOT 4";
  $('extraNote').value="";
  render();
@@ -770,13 +769,9 @@ document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventLis
 $('date').addEventListener('input',()=>{updateNextDate();render()});
 $('date').addEventListener('change',()=>{updateNextDate();render()});
 // Náhľad štítku sa aktualizuje okamžite pri každom výbere alebo zmene servisnej položky.
-document.querySelectorAll('input[name="servicePart"],#oilType,#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
+document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date,#current,#nextDate,#nextKm').forEach(el=>{
  el.addEventListener('input',render);
  el.addEventListener('change',render);
-});
-$('oilType').addEventListener('change',()=>{
- if($('oilType').value) $('oilCheck').checked=true;
- render();
 });
 updateUnitLabels();
 </script>
