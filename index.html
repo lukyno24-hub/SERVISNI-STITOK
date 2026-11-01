@@ -24,13 +24,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .printer-button.connected{background:#198754}
 .printer-button:disabled{opacity:.75;cursor:wait}
 .printer-panel .status{margin-top:8px;text-align:center}
-.paper-info{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);text-align:left;font-size:14px}
-.paper-info>.status{text-align:left;margin:6px 0 10px}
-.paper-manual{margin-top:10px;padding:10px;background:#f8fafc;border-radius:8px}
-.paper-manual-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
-.paper-manual-row label{font-size:12px}
-.paper-manual-row input{margin-top:4px;padding:8px}
-.paper-manual button{width:100%}
+.printer-extra-info{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);text-align:left;font-size:14px}
+.usage-counters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px}
+.usage-counters>div{border:1px solid var(--line);border-radius:7px;padding:9px;background:#fff}
+.usage-counters span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+.usage-counters strong{display:block;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
 .printer-extra-info{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);text-align:left;font-size:14px}
 .printer-extra-info>.status,.media-details>.status{margin:5px 0 10px;text-align:left}
 .media-details{border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px;background:#fbfcfd}
@@ -119,32 +117,24 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">Tlačiareň nie je pripojená.</div>
-<div class="paper-info">
- <b>Rozmer štítku v tlačiarni</b>
- <div id="paperStatus" class="status">Po pripojení sa pokúsim načítať rozmer z RFID kotúča.</div>
- <div class="paper-manual">
-  <span class="small">Ručné zadanie, ak sa rozmer nedá načítať:</span>
-  <div class="paper-manual-row">
-   <label for="manualPaperWidth">Šírka (mm)<input id="manualPaperWidth" type="number" min="10" max="100" step="0.1" value="50"></label>
-   <label for="manualPaperHeight">Výška (mm)<input id="manualPaperHeight" type="number" min="10" max="200" step="0.1" value="90"></label>
+<div class="printer-extra-info">
+ <b>Údaje o tlačiarni</b>
+ <div id="printerDetails" class="status">Údaje sa načítajú po pripojení tlačiarne.</div>
+ <div class="media-details">
+  <b>Štítok / papier</b>
+  <div id="labelRfidDetails" class="status">RFID štítku zatiaľ nenačítané.</div>
+  <div class="usage-counters">
+   <div><span>Spotrebované / celkom</span><strong id="labelUsage">— / —</strong></div>
+   <div><span>Zostáva kusov</span><strong id="labelRemaining">—</strong></div>
   </div>
-  <button class="light" type="button" onclick="applyManualPaperSize()">Použiť ručný rozmer</button>
+  <b>Farba štítku</b>
+  <div id="labelColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
  </div>
- <div class="printer-extra-info">
-  <b>Ďalšie údaje z tlačiarne</b>
-  <div id="printerDetails" class="status">Údaje sa načítajú po pripojení tlačiarne.</div>
-  <div class="media-details">
-   <b>Štítok / papier</b>
-   <div id="labelRfidDetails" class="status">RFID štítku zatiaľ nenačítané.</div>
-   <b>Farba štítku</b>
-   <div id="labelColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
-  </div>
-  <div class="media-details">
-   <b>Ribon / páska</b>
-   <div id="ribbonRfidDetails" class="status">RFID ribonu zatiaľ nenačítané.</div>
-   <b>Farba ribonu</b>
-   <div id="ribbonColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
-  </div>
+ <div class="media-details">
+  <b>Ribon / páska</b>
+  <div id="ribbonRfidDetails" class="status">RFID ribonu zatiaľ nenačítané.</div>
+  <b>Farba ribonu</b>
+  <div id="ribbonColorDetails" class="status">Údaj o farbe zatiaľ nie je dostupný.</div>
  </div>
 </div>
 </section>
@@ -247,7 +237,6 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 let records=[], activeScanner=null, currentLabel=null;
 let printerDevice=null, printerTx=null, printerRx=null;
 let printerProtocolVersion=null;
-let paperSize=null;
 let printerRxBuffer=new Uint8Array(0);
 let printerResponseWaiters=new Map();
 const printerUuids=[
@@ -273,9 +262,9 @@ function setPrinterState(connected,message){
  $('printerStatus').textContent=message||(connected?"Tlačiareň Niimbot M2 je pripojená.":"Tlačiareň nie je pripojená.");
  if(!connected){
   printerProtocolVersion=null;
-  paperSize=null;
-  $('paperStatus').textContent="Tlačiareň nie je pripojená. Rozmer štítku nie je načítaný.";
   $('printerDetails').textContent="Údaje sa načítajú po pripojení tlačiarne.";
+  $('labelUsage').textContent="— / —";
+  $('labelRemaining').textContent="—";
   $('labelRfidDetails').textContent="RFID štítku zatiaľ nenačítané.";
   $('ribbonRfidDetails').textContent="RFID ribonu zatiaľ nenačítané.";
   $('labelColorDetails').textContent="Údaj o farbe nie je dostupný.";
@@ -352,48 +341,6 @@ async function requestPrinterResponse(command,data,responseCommand,timeout=2500)
  return await responsePromise;
 }
 function readU16BE(data,index){return (data[index]<<8)|data[index+1];}
-function setPaperStatus(message){$('paperStatus').textContent=message;}
-function applyManualPaperSize(){
- const width=Number($('manualPaperWidth').value);
- const height=Number($('manualPaperHeight').value);
- if(!Number.isFinite(width)||!Number.isFinite(height)||width<10||width>100||height<10||height>200){
-  alert("Zadaj platnú šírku 10–100 mm a výšku 10–200 mm.");
-  return;
- }
- paperSize={width,height,source:"manual"};
- setPaperStatus("Ručne nastavený rozmer: "+width+" × "+height+" mm. Rozmer ešte nie je potvrdený z RFID tlačiarne.");
-}
-async function detectPaperSize(){
- paperSize=null;
- setPaperStatus("Čítam RFID kotúč a dekódujem rozmery podľa protokolu Niimbot…");
- try{
-  // NiimBlueLib používa príkaz 0x59 a odpoveď 0x69.
-  const info=await requestPrinterResponse(0x59,[0x01],0x69,4000);
-  if(info.data.length!==18){
-   const raw=info.data.map(v=>v.toString(16).padStart(2,"0")).join(" ");
-   throw new Error(info.data.length===1
-    ?"Tlačiareň nevrátila údaje o rozmere z RFID kotúča."
-    :"Odpoveď o papieri má neznámy formát ("+info.data.length+" bajtov; HEX: "+raw+").");
-  }
-  // Protokol Niimbot ukladá 16-bitové hodnoty v poradí big-endian.
-  const gapHeight=readU16BE(info.data,5)/10;
-  const totalHeight=readU16BE(info.data,7)/10;
-  const width=readU16BE(info.data,11)/10;
-  // Na Niimbot M2 RFID hlási celkový posun vrátane medzery medzi štítkami.
-  // Skutočná výška jednej etikety je preto celková výška mínus medzera.
-  const height=totalHeight-gapHeight;
-  if(width<10||width>100||height<10||height>200){
-   const raw=info.data.map(v=>v.toString(16).padStart(2,"0")).join(" ");
-   throw new Error("Dekódované rozmery: "+width+" × "+height+" mm. Odpoveď RFID (HEX): "+raw);
-  }
-  paperSize={width,height,gapHeight,paperType:info.data[4],source:"rfid"};
-  $('manualPaperWidth').value=width;
-  $('manualPaperHeight').value=height;
-  setPaperStatus("Automaticky rozpoznaný štítok: "+width+" × "+height+" mm (RFID)."+(gapHeight?" Medzera medzi štítkami: "+gapHeight+" mm. Celkový posun kotúča: "+totalHeight+" mm.":""));
- }catch(error){
-  setPaperStatus("Automatické čítanie rozmeru zlyhalo: "+(error?.message||String(error))+" Ručný rozmer môžeš nastaviť nižšie.");
- }
-}
 function decodeRfidInfo(data){
  if(!data||data.length===1) return {tagPresent:false};
  if(data.length<15) throw new Error("RFID odpoveď je neúplná ("+data.length+" bajtov).");
@@ -451,7 +398,14 @@ async function detectOtherPrinterInfo(){
  try{const r=await requestPrinterResponse(0x40,[0x08],0x48,2000);modelId=r.data.length===1?(r.data[0]<<8):readU16BE(r.data,0);}
  catch(e){}
 
- if(label) $('labelRfidDetails').innerHTML=rfidInfoHtml(label);
+ if(label){
+  $('labelRfidDetails').innerHTML=rfidInfoHtml(label);
+  $('labelUsage').textContent=label.total>=0?label.used+" / "+label.total:"Neznáme";
+  $('labelRemaining').textContent=label.total>=0?String(Math.max(0,label.total-label.used)):"Neznáme";
+ }else{
+  $('labelUsage').textContent="— / —";
+  $('labelRemaining').textContent="Neznáme";
+ }
  if(ribbon) $('ribbonRfidDetails').innerHTML=rfidInfoHtml(ribbon);
 
  // Bežné RFID odpovede neobsahujú samostatné pole s farbou média.
@@ -549,7 +503,6 @@ async function pripojit(){
    }
   }
   setPrinterState(true,"Pripojená: "+(printerDevice.name||"Niimbot M2")+" (protokol "+(printerProtocolVersion||"nezistený")+")");
-  await detectPaperSize();
   await detectOtherPrinterInfo();
  }catch(error){
   printerTx=null;printerRx=null;
