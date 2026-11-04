@@ -6,6 +6,7 @@
 <title>Servisné štítky</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{--green:#198754;--blue:#0d6efd;--ink:#1f2937;--muted:#667085;--line:#e5e7eb}
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f3f5f8;color:var(--ink);margin:0;padding:18px}
@@ -24,6 +25,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .printer-button.connected{background:#198754}
 .printer-button:disabled{opacity:.75;cursor:wait}
 .printer-panel .status{margin-top:8px;text-align:center}
+.label-storage{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);text-align:left}
+.label-storage>b{display:block;font-size:14px;margin-bottom:8px}
+.label-storage button{width:100%}
+.label-storage .status{text-align:left;font-size:12px;line-height:1.4}
+.save-copy-status{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
 .printer-extra-info{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);text-align:left;font-size:14px}
 .usage-counters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px}
 .usage-counters>div{border:1px solid var(--line);border-radius:7px;padding:9px;background:#fff}
@@ -63,6 +69,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .record strong{display:block;margin-bottom:4px}.small{font-size:12px;color:var(--muted)}
 .history-machine{font-size:14px;font-weight:bold;margin:0 0 10px;color:#344054}
 .label-preview{width:30mm;height:50mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:1mm;background:white;color:#111;overflow:hidden}
+.label-preview.saving-copy{border:0!important}
 .label-header{text-align:center;font-size:5.2pt;line-height:0.9;margin:0 0 0.4mm;overflow-wrap:anywhere;flex:0 0 auto}.header-email{font-size:4.2pt;line-height:0.85;white-space:nowrap;letter-spacing:-0.18pt;overflow:hidden}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:4.8pt;line-height:0.85}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0;text-align:center;font-size:5.8pt;line-height:0.9;letter-spacing:-0.15pt}
 .label-info{font-size:5.4pt;line-height:0.9;overflow-wrap:anywhere;min-height:0}
 .service-section-title{display:block;text-align:center;font-weight:bold;font-size:5.6pt;line-height:0.9}
@@ -126,6 +133,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">Tlačiareň nie je pripojená.</div>
+<div class="label-storage">
+ <b>Ukladanie vytlačených štítkov</b>
+ <button id="folderButton" class="light" type="button" onclick="chooseLabelFolder()">📁 Vybrať priečinok na ukladanie</button>
+ <div id="folderStatus" class="status">Priečinok nie je nastavený. Kópie sa zatiaľ ukladajú medzi stiahnuté súbory.</div>
+</div>
 <div class="printer-extra-info">
  <div class="media-details">
   <b>Rozmer štítku</b>
@@ -264,7 +276,8 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="label-info label-next" id="labelNext"></div>
 <div class="qr-bottom"><div id="qrcode" aria-label="QR kód kompletnej servisnej histórie"></div></div>
 </section></div>
-<div class="preview-actions"><button class="light" type="button" onclick="closePreview()">Zavrieť</button><button class="primary" type="button" onclick="window.print()">🖨️ Tlačiť štítok</button></div>
+<div class="preview-actions"><button class="light" type="button" onclick="closePreview()">Zavrieť</button><button class="primary" type="button" onclick="printAndSaveLabel()">🖨️ Uložiť a tlačiť štítok</button></div>
+<div id="saveCopyStatus" class="save-copy-status" role="status">Pri tlači sa uloží aj PNG kópia etikety.</div>
 </div></div>
 </main>
 <script>
@@ -756,6 +769,119 @@ function clearForm(){
  render();
  $('appStatus').textContent="Výber nového servisu bol vyčistený. História načítaná z QR kódu zostáva.";
 }
+let labelFolderHandle=null;
+const LABEL_FOLDER_DB="servisnyAsistentLabelStorage";
+const LABEL_FOLDER_STORE="settings";
+function openLabelFolderDb(){
+ return new Promise((resolve,reject)=>{
+  const request=indexedDB.open(LABEL_FOLDER_DB,1);
+  request.onupgradeneeded=()=>request.result.createObjectStore(LABEL_FOLDER_STORE);
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(request.error);
+ });
+}
+async function storeLabelFolder(handle){
+ const db=await openLabelFolderDb();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(LABEL_FOLDER_STORE,"readwrite");
+  tx.objectStore(LABEL_FOLDER_STORE).put(handle,"directory");
+  tx.oncomplete=()=>{db.close();resolve()};
+  tx.onerror=()=>{db.close();reject(tx.error)};
+ });
+}
+async function restoreLabelFolder(){
+ try{
+  const db=await openLabelFolderDb();
+  const handle=await new Promise((resolve,reject)=>{
+   const tx=db.transaction(LABEL_FOLDER_STORE,"readonly");
+   const req=tx.objectStore(LABEL_FOLDER_STORE).get("directory");
+   req.onsuccess=()=>resolve(req.result||null);
+   req.onerror=()=>reject(req.error);
+  });
+  db.close();
+  if(handle){
+   labelFolderHandle=handle;
+   $('folderStatus').textContent="Vybraný priečinok: "+handle.name+". Pri ďalšom ukladaní môže prehliadač vyžiadať opätovné povolenie.";
+  }
+ }catch(e){
+  $('folderStatus').textContent="Prehliadač nepodporuje zapamätanie priečinka. Súbory sa môžu ukladať medzi stiahnuté súbory.";
+ }
+}
+async function chooseLabelFolder(){
+ if(!window.showDirectoryPicker){
+  $('folderStatus').textContent="Tento prehliadač neponúka priamy výber priečinka. Nastav v Chrome ukladanie sťahovaných súborov na SD kartu; PNG kópie sa stiahnu do zvoleného umiestnenia.";
+  return;
+ }
+ try{
+  const handle=await window.showDirectoryPicker({id:"servisne-stitky",mode:"readwrite"});
+  const permission=await handle.requestPermission({mode:"readwrite"});
+  if(permission!=="granted") throw new Error("Prehliadač nepovolil zápis do priečinka.");
+  labelFolderHandle=handle;
+  await storeLabelFolder(handle);
+  $('folderStatus').textContent="Priečinok je nastavený: "+handle.name+". Každá vytlačená etiketa sa uloží ako PNG.";
+ }catch(e){
+  if(e.name!=="AbortError") $('folderStatus').textContent="Priečinok sa nepodarilo nastaviť: "+(e.message||String(e));
+ }
+}
+function makeLabelFileName(){
+ const machine=$('machine').value.trim().replace(/[^a-z0-9_-]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,32)||"stroj";
+ const stamp=new Date().toISOString().replace(/[:.]/g,"-").replace("T","_").slice(0,19);
+ return "Servisny_stitok_"+machine+"_"+stamp+".png";
+}
+async function createLabelPngBlob(){
+ if(typeof html2canvas!=="function") throw new Error("Knižnica na vytvorenie obrázka sa nenačítala. Skontroluj internetové pripojenie.");
+ const area=$('printArea');
+ area.classList.add("saving-copy");
+ try{
+  const canvas=await html2canvas(area,{backgroundColor:"#ffffff",scale:300/96,useCORS:true,logging:false});
+  return await new Promise((resolve,reject)=>{
+   canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("PNG obrázok sa nepodarilo vytvoriť.")),"image/png");
+  });
+ }finally{
+  area.classList.remove("saving-copy");
+ }
+}
+async function writeLabelBlob(blob,fileName){
+ if(labelFolderHandle){
+  try{
+   let permission=await labelFolderHandle.queryPermission({mode:"readwrite"});
+   if(permission!=="granted") permission=await labelFolderHandle.requestPermission({mode:"readwrite"});
+   if(permission==="granted"){
+    const fileHandle=await labelFolderHandle.getFileHandle(fileName,{create:true});
+    const writable=await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    $('folderStatus').textContent="Uložená kópia: "+fileName+" (priečinok "+labelFolderHandle.name+").";
+    return "folder";
+   }
+  }catch(e){
+   $('folderStatus').textContent="Zápis do priečinka zlyhal. Kópiu uložím medzi stiahnuté súbory.";
+  }
+ }
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+ link.href=url;
+ link.download=fileName;
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ return "download";
+}
+async function saveLabelCopy(){
+ $('saveCopyStatus').textContent="Vytváram PNG kópiu štítku…";
+ const blob=await createLabelPngBlob();
+ const fileName=makeLabelFileName();
+ const destination=await writeLabelBlob(blob,fileName);
+ $('saveCopyStatus').textContent=destination==="folder"?"Kópia štítku bola uložená do nastaveného priečinka.":"Kópia štítku bola stiahnutá. Skontroluj priečinok Sťahovanie.";
+}
+function printAndSaveLabel(){
+ // Tlač sa spustí priamo v kliknutí používateľa; kópia sa uloží po zavretí tlačového dialógu.
+ window.print();
+ saveLabelCopy().catch(error=>{
+  $('saveCopyStatus').textContent="Kópiu sa nepodarilo uložiť: "+(error?.message||String(error));
+ });
+}
 function openPreview(){
  // Otvoriť okno najprv, aby prípadná chyba QR kódu nezablokovala náhľad.
  $('previewModal').classList.add('open');
@@ -836,6 +962,7 @@ document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date
 });
 document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.addEventListener('change',()=>{updateKmIntervalOptions();render()}));
 updateUnitLabels();
+restoreLabelFolder();
 </script>
 </body>
 </html>
