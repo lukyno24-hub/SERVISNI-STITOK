@@ -705,7 +705,8 @@ function render(){
  labelRows.push({text:"NASLEDUJÚCI SERVIS",kind:"center"});
  labelRows.push({text:"Dátum: "+fmtDate(shown.nextDate),kind:""});
  if(hasUnit&&shown.nextKm) labelRows.push({text:unitText+": "+shown.nextKm,kind:"bold"});
- const limitedRows=labelRows.slice(0,15);
+ // Tri riadky firemnej hlavičky + najviac 12 servisných riadkov = spolu 15 riadkov textu.
+ const limitedRows=labelRows.slice(0,12);
  limitedRows.forEach(row=>{
   const el=document.createElement("div");
   el.className="label-row "+(row.kind||"");
