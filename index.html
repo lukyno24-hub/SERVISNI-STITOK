@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.7</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.8</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -334,7 +334,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </div>
 <div id="previewPrintedStatus" class="preview-print-status" hidden>
  <label for="previewPrintCountInput">Vytlačené</label>
- <input id="previewPrintCountInput" type="number" min="0" step="1" value="0" aria-label="Počet výtlačkov">
+ <input id="previewPrintCountInput" type="text" inputmode="numeric" value="0" aria-label="Počet výtlačkov">
  <span>výtlačkov</span>
 </div>
 <div id="saveCopyStatus" class="save-copy-status" role="status">Pri tlači sa uloží aj PNG kópia etikety.</div>
@@ -1416,7 +1416,7 @@ function renderFilingCabinet(){
    const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
    const originalIndex=(item.records||[]).length-1-index;
    const printCount=Math.max(0,Number(record.printCount)||(record.printed===true?1:0));
-   const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+printCount+'</strong></span>';
+   const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+formatPrintedCount(printCount)+'</strong></span>';
    return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
   return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
@@ -1589,6 +1589,10 @@ function printAndSaveLabel(){
   $('saveCopyStatus').textContent="Kópiu sa nepodarilo uložiť: "+(error?.message||String(error));
  });
 }
+function formatPrintedCount(value){
+ const count=String(value).trim()==="✓"?1:Math.max(0,Math.floor(Number(value)||0));
+ return count===1?"✓":String(count);
+}
 function updatePreviewActionMode(){
  const saveButton=$("previewSaveButton");
  const printButton=$("previewPrintButton");
@@ -1604,7 +1608,7 @@ function updatePreviewActionMode(){
   const {key,index}=viewingInternalServiceRef;
   const item=readInternalRecords()[key];
   const record=item&&item.records&&item.records[index];
-  printCountInput.value=String(Math.max(0,Number(record?.printCount)||(record?.printed===true?1:0)));
+  printCountInput.value=formatPrintedCount(Number(record?.printCount)||(record?.printed===true?1:0));
  }
 }
 function setViewedServicePrintCount(value){
@@ -1638,7 +1642,7 @@ function markViewedServiceAsPrinted(){
  directory[key]=item;
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
  const countInput=$("previewPrintCountInput");
- if(countInput)countInput.value=String(record.printCount);
+ if(countInput)countInput.value=formatPrintedCount(record.printCount);
 }
 function handlePreviewPrint(){
  if(viewingInternalService){
@@ -1661,7 +1665,10 @@ function openPreview(){
 function closePreview(){
  $('previewModal').classList.remove('open');
 }
-$("previewPrintCountInput").addEventListener("change",event=>setViewedServicePrintCount(event.target.value));
+$("previewPrintCountInput").addEventListener("change",event=>{
+ setViewedServicePrintCount(event.target.value);
+ updatePreviewActionMode();
+});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
 function updateUnitLabels(){
  const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
