@@ -290,11 +290,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div id="appStatus" class="status">Vyber servisné položky a skontroluj ich v náhľade štítku.</div>
 </section>
 
-<section class="panel">
-<h2>Servisná história z QR kódu</h2>
-<div id="historyMachine" class="history-machine">Stroj: —</div>
-<div id="historyList" class="small">Najprv naskenuj QR kód z predchádzajúceho štítku.</div>
-</section>
+
 
 <div id="previewModal" onclick="if(event.target===this)closePreview()">
 <div class="preview-dialog" role="dialog" aria-modal="true" aria-labelledby="previewHeading">
@@ -993,8 +989,9 @@ function loadQR(raw){
  loadOwnerForMachine();
  records=Array.isArray(obj.records)?obj.records:[];
  saveInternalMachineRecord();
- render();renderHistory();
- $('scanStatus').textContent=`Načítané z QR kódu: ${obj.machine||"stroj"} • ${records.length} servisných záznamov. Vyber nový servisný zásah; nový QR kód sa bude aktualizovať v náhľade.`;
+ render();
+ $('scanStatus').textContent=`Načítané z QR kódu: ${obj.machine||"stroj"} • ${records.length} servisných záznamov. Otváram príslušný záznam v kartotéke.`;
+ openFilingCabinet();
 }
 async function startScan(){
  if(!window.Html5Qrcode){alert("QR skener sa nenačítal. Skontroluj internet a otvor aplikáciu cez HTTPS.");return}
@@ -1007,12 +1004,7 @@ async function startScan(){
 }
 async function stopScan(){if(activeScanner){try{await activeScanner.stop();activeScanner.clear()}catch(e){} activeScanner=null}$('scanner').style.display="none"}
 
-function renderHistory(){
- const machineName=$('machine').value.trim();
- $('historyMachine').textContent="Stroj: "+(machineName||"—");
- if(!records.length){$('historyList').textContent="Najprv naskenuj QR kód z predchádzajúceho štítku.";return}
- $('historyList').innerHTML=records.map((r,i)=>{const hasUnit=r.unit==="km"||r.unit==="mh";const ut=r.unit==="mh"?"MTH":"KM";const current=hasUnit&&r.current?" · "+escapeHtml(r.current)+" "+ut:"";const next=hasUnit&&r.nextKm?" · "+escapeHtml(r.nextKm)+" "+ut:"";return `<div class="record"><strong>${i+1}. ${escapeHtml(fmtDate(r.date))}${current}</strong>${escapeHtml(r.description||"")}<div class="small">Ďalší servis: ${escapeHtml(fmtDate(r.nextDate))}${next}</div></div>`;}).join("");
-}
+
 function clearForm(){
  $('date').value=today();
  $('current').value="";
@@ -1162,7 +1154,7 @@ function openInternalServiceRecord(key,index){
  }
  $("nextKmManual").value=selected.unit==="mh"?(selected.nextKm||""):"";
  updateNextDate();
- render();renderHistory();closeFilingCabinet();
+ render();closeFilingCabinet();
  $("appStatus").textContent="Otvorený servisný zásah na úpravu: "+(item.machine||"")+" · "+(selected.date?fmtDate(selected.date):"bez dátumu")+". Pri uložení sa zachová ostatná história.";
 }
 function renderFilingCabinet(){
@@ -1207,7 +1199,6 @@ function renderFilingCabinet(){
   localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
   if(ownerMachineKey($("machine").value)===key)records=Array.isArray(item.records)?item.records:[];
   renderFilingCabinet();
-  renderHistory();
  }));
  $("filingCabinetList").querySelectorAll("[data-open-service]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.openService;
@@ -1224,7 +1215,7 @@ function renderFilingCabinet(){
   $("ownerName").value=item.ownerName||"";
   $("ownerNumber").value=item.ownerNumber||"";
   records=Array.isArray(item.records)?item.records:[];
-  render();renderHistory();closeFilingCabinet();
+  render();closeFilingCabinet();
   $("appStatus").textContent="Načítaný interný záznam stroja: "+(item.machine||"");
  }));
 }
@@ -1405,7 +1396,7 @@ document.querySelectorAll('input[name="unit"]').forEach(el=>{
  });
  el.addEventListener('change',()=>{updateUnitLabels();updateKmIntervalOptions();render()});
 });
-$('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
+$('machine').addEventListener('input',()=>{if(records.length)render()});
 $('machine').addEventListener('change',()=>{loadOwnerForMachine();saveInternalMachineRecord()});
 $('filingSearch').addEventListener('input',renderFilingCabinet);
 $('ownerName').addEventListener('change',saveOwnerForMachine);
