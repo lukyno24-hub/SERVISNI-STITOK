@@ -26,14 +26,18 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .printer-button.connected{background:#198754}
 .printer-button:disabled{opacity:.75;cursor:wait}
 .printer-panel .status{margin-top:8px;text-align:center}
-#printerStatus{font-size:12px;line-height:1.8}
+#printerStatus{font-size:12px;line-height:1.35!important;white-space:normal!important}
 #printerStatus #printerConnectionStatus,
 #printerStatus #printerMediaInfo,
 #printerStatus #paperSizeStatus,
-#printerStatus .printer-usage{display:block;margin:0;font-size:12px;line-height:inherit}
+#printerStatus .printer-usage,
+#printerStatus .printer-usage strong{font-size:12px;line-height:1.35!important}
+#printerStatus #printerConnectionStatus,
+#printerStatus #paperSizeStatus,
+#printerStatus .printer-usage{display:block;margin:0}
 #printerStatus #paperSizeStatus{font-weight:600}
 #printerStatus .printer-usage{text-align:center}
-#printerStatus .printer-usage strong{display:inline;font-size:12px;font-weight:700;line-height:inherit}
+#printerStatus [hidden]{display:none!important}
 
 .machine-autocomplete-wrap{position:relative}
 #machineMatchStatus{min-height:0;margin-top:4px;color:var(--muted)}
