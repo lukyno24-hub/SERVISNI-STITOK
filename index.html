@@ -299,7 +299,7 @@ const $=id=>document.getElementById(id);
 function applyLabelDimensions(width,height){
  width=Number(width);height=Number(height);
  if(!Number.isFinite(width)||!Number.isFinite(height)||width<10||width>100||height<10||height>200)return false;
- // Používame orientáciu na stojato, ako v pôvodných verziách projektu.
+ // Rozmery z RFID orientujeme na stojato, ako v pôvodných šablónach.
  let layoutWidth=width,layoutHeight=height;
  if(layoutWidth>layoutHeight){const swap=layoutWidth;layoutWidth=layoutHeight;layoutHeight=swap;}
  labelDimensions={width:layoutWidth,height:layoutHeight};
@@ -307,57 +307,19 @@ function applyLabelDimensions(width,height){
  const isSmall=Math.abs(layoutWidth-30)<0.2&&Math.abs(layoutHeight-50)<0.2;
  const widthText=layoutWidth+"mm",heightText=layoutHeight+"mm";
  const labelText=layoutWidth+" × "+layoutHeight+" mm";
- const area=$('printArea');
+ const area=$("printArea");
  area.classList.toggle("large-label",isLarge);
  area.classList.toggle("small-label",isSmall);
- $('previewHeading').textContent="Náhľad štítku "+labelText;
- document.querySelectorAll('.preview-launch').forEach(button=>button.textContent="👁 Náhľad štítku "+labelText);
+ $("previewHeading").textContent="Náhľad štítku "+labelText;
+ document.querySelectorAll(".preview-launch").forEach(button=>button.textContent="👁 Náhľad štítku "+labelText);
  const qrSize=isLarge?40:26;
- const qrBox=area.querySelector(".qr-bottom");
- const qrElement=$("qrcode");
- if(qrBox&&qrElement){
-  [qrBox,qrElement].forEach(el=>{
-   el.style.setProperty("width",qrSize+"mm","important");
-   el.style.setProperty("height",qrSize+"mm","important");
-   el.style.setProperty("min-width",qrSize+"mm","important");
-   el.style.setProperty("min-height",qrSize+"mm","important");
-   el.style.setProperty("flex","0 0 "+qrSize+"mm","important");
-  });
-  qrElement.querySelectorAll("svg,img,canvas").forEach(el=>{
-   el.style.setProperty("width",qrSize+"mm","important");
-   el.style.setProperty("height",qrSize+"mm","important");
-   el.style.setProperty("min-width",qrSize+"mm","important");
-   el.style.setProperty("min-height",qrSize+"mm","important");
-   el.style.setProperty("max-width","none","important");
-   el.style.setProperty("max-height","none","important");
-  });
- }
  let css="";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;}";
- css+="#printArea .qr-bottom{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
- css+="#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
- css+="#printArea #qrcode img,#printArea #qrcode canvas,#printArea #qrcode svg{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;max-width:none!important;max-height:none!important;display:block!important;}";
- css+="#printArea.large-label .qr-bottom,#printArea.large-label #qrcode{width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;flex:0 0 40mm!important;}";
- css+="#printArea.large-label #qrcode svg,#printArea.large-label #qrcode img,#printArea.large-label #qrcode canvas{width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;max-width:none!important;max-height:none!important;}";
+ css+="#printArea .qr-bottom,#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
+ css+="#printArea #qrcode svg,#printArea #qrcode img,#printArea #qrcode canvas{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;max-width:none!important;max-height:none!important;display:block!important;}";
  if(isLarge){
-  #printArea.large-labelwidth:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}
-  #printArea.large-label .label-headertext-align:center;font-size:7pt;line-height:1.2;margin:0 0 1mm;overflow-wrap:anywhere}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}
-  #printArea.large-label .header-contact-rowdisplay:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}
-  #printArea.large-label h3display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}
-  #printArea.large-label .label-infofont-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}
-  #printArea.large-label .service-section-titledisplay:block;text-align:center;font-weight:bold}
-  #printArea.large-label .label-meta-rowdisplay:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;white-space:nowrap;width:100%;font-size:7.5pt;line-height:1.25}
-  #printArea.large-label .label-meta-row .meta-valuetext-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}
-  #printArea.large-label .label-meta-row .meta-dateflex:0 0 auto}
-  #printArea.large-label .label-nextmargin-top:1.5mm}
-  #printArea.large-label .service-print-groupmargin-top:1mm}
-  #printArea.large-label .service-print-titlefont-weight:bold;font-size:7.5pt;line-height:1.2;margin-bottom:0.5mm;text-align:center}
-  #printArea.large-label .service-print-itemsdisplay:grid;grid-template-columns:1fr 1fr;column-gap:2mm;row-gap:0.5mm}
-  #printArea.large-label .service-print-itemdisplay:flex;align-items:center;justify-content:space-between;gap:1mm;font-size:7pt;line-height:1.15;min-width:0}
-  #printArea.large-label .service-print-item .service-print-nameoverflow-wrap:anywhere;min-width:0}
-  #printArea.large-label .service-checkwidth:3mm;height:3mm;min-width:3mm;border:0.3mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:6.5pt;font-weight:bold;line-height:1}
-  #printArea.large-label .service-print-notefont-size:7pt;line-height:1.2;margin-top:1mm}
- }css+="#printArea.large-label{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}\n#printArea.large-label .label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1mm;overflow-wrap:anywhere}\n#printArea.large-label .header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}\n#printArea.large-label h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}\n#printArea.large-label .label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}\n#printArea.large-label .service-section-title{display:block;text-align:center;font-weight:bold}\n#printArea.large-label .label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;white-space:nowrap;width:100%;font-size:7.5pt;line-height:1.25}\n#printArea.large-label #printArea.large-label .label-meta-row .meta-value{text-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}\n#printArea.large-label #printArea.large-label .label-meta-row .meta-date{flex:0 0 auto}\n#printArea.large-label .label-next{margin-top:1.5mm}\n#printArea.large-label .service-print-group{margin-top:1mm}\n#printArea.large-label .service-print-title{font-weight:bold;font-size:7.5pt;line-height:1.2;margin-bottom:0.5mm;text-align:center}\n#printArea.large-label #printArea.large-label .service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:2mm;row-gap:0.5mm}\n#printArea.large-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:1mm;font-size:7pt;line-height:1.15;min-width:0}\n#printArea.large-label #printArea.large-label .service-print-item .service-print-name{overflow-wrap:anywhere;min-width:0}\n#printArea.large-label .service-check{width:3mm;height:3mm;min-width:3mm;border:0.3mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:6.5pt;font-weight:bold;line-height:1}\n#printArea.large-label .service-print-note{font-size:7pt;line-height:1.2;margin-top:1mm}";}
+  css+="#printArea.large-label{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}\n#printArea.large-label .label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1mm;overflow-wrap:anywhere}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}\n#printArea.large-label .label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}\n#printArea.large-label .service-section-title{display:block;text-align:center;font-weight:bold}\n#printArea.large-label .label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;white-space:nowrap;width:100%;font-size:7.5pt;line-height:1.25}\n#printArea.large-label .label-meta-row .meta-value{text-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}\n#printArea.large-label .label-meta-row .meta-date{flex:0 0 auto}\n#printArea.large-label .label-next{margin-top:1.5mm}\n#printArea.large-label .service-print-group{margin-top:1mm}\n#printArea.large-label .service-print-title{font-weight:bold;font-size:7.5pt;line-height:1.2;margin-bottom:0.5mm;text-align:center}\n#printArea.large-label .service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:2mm;row-gap:0.5mm}\n#printArea.large-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:1mm;font-size:7pt;line-height:1.15;min-width:0}\n#printArea.large-label .service-print-item .service-print-name{overflow-wrap:anywhere;min-width:0}\n#printArea.large-label .service-check{width:3mm;height:3mm;min-width:3mm;border:0.3mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:6.5pt;font-weight:bold;line-height:1}\n#printArea.large-label .service-print-note{font-size:7pt;line-height:1.2;margin-top:1mm}";
+ }
  css+="@media print{";
  css+="@page{size:"+widthText+" "+heightText+";margin:0;}";
  css+="html,body{width:"+widthText+"!important;height:"+heightText+"!important;margin:0!important;padding:0!important;background:white!important;}";
@@ -366,28 +328,11 @@ function applyLabelDimensions(width,height){
  css+=".preview-dialog{width:"+widthText+"!important;height:"+heightText+"!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;}";
  css+=".preview-stage{display:block!important;width:"+widthText+"!important;height:"+heightText+"!important;padding:0!important;margin:0!important;}";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;margin:0!important;box-sizing:border-box!important;overflow:hidden!important;}";
- css+="#printArea .qr-bottom{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;margin:auto auto 0!important;}";
- css+="#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
- css+="#printArea #qrcode img,#printArea #qrcode canvas,#printArea #qrcode svg{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;max-width:none!important;max-height:none!important;display:block!important;}";
- css+="#printArea.large-label .qr-bottom,#printArea.large-label #qrcode{width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;flex:0 0 40mm!important;}";
- css+="#printArea.large-label #qrcode svg,#printArea.large-label #qrcode img,#printArea.large-label #qrcode canvas{width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;max-width:none!important;max-height:none!important;}";
+ css+="#printArea .qr-bottom,#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;margin:auto auto 0!important;}";
+ css+="#printArea #qrcode svg,#printArea #qrcode img,#printArea #qrcode canvas{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;max-width:none!important;max-height:none!important;display:block!important;}";
  if(isLarge){
   css+="#printArea.large-label{padding:2mm!important;}";
-  css+="#printArea.large-label .label-header{font-size:6pt!important;line-height:0.95!important;margin:0 0 0.35mm!important}";
-  css+="#printArea.large-label .label-header>div{margin:0!important;padding:0!important;line-height:0.95!important}";
-  css+="#printArea.large-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:6pt!important;line-height:0.9!important}";
-  css+="#printArea.large-label .label-preview h3{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;width:100%!important;font-size:7pt!important;line-height:0.9!important;letter-spacing:-0.2pt!important;margin:0 0 0.1mm!important;padding:0!important}";
-  css+="#printArea.large-label .label-info{font-size:6.2pt!important;line-height:0.92!important}";
-  css+="#printArea.large-label .label-meta-row{font-size:6.2pt!important;line-height:0.92!important;gap:0.8mm!important;margin:0!important;padding:0!important}";
-  css+="#printArea.large-label .service-section-title{font-size:6.5pt!important;line-height:0.95!important;margin:0!important;padding:0!important}";
-  css+="#printArea.large-label .label-next{margin-top:0.3mm!important}";
-  css+="#printArea.large-label .service-print-group{margin-top:0.1mm!important;padding:0!important}";
-  css+="#printArea.large-label .service-print-title{font-size:6.2pt!important;line-height:0.95!important;margin:0 0 0.05mm!important;padding:0!important}";
-  css+="#printArea.large-label .service-print-items{column-gap:1mm!important;row-gap:0!important}";
-  css+="#printArea.large-label .service-print-item{font-size:5.8pt!important;line-height:0.9!important;gap:0.5mm!important;margin:0!important;padding:0!important}";
-  css+="#printArea.large-label .service-check{width:2.3mm!important;height:2.3mm!important;min-width:2.3mm!important;font-size:4.8pt!important}";
-  css+="#printArea.large-label .service-print-note{font-size:5.8pt!important;line-height:0.95!important;margin:0!important;padding:0!important}";
-
+  css+="#printArea.large-label .label-header{font-size:6pt!important;line-height:0.95!important;margin:0 0 0.35mm!important}\n#printArea.large-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:6pt!important;line-height:0.9!important}\n#printArea.large-label h3{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;width:100%!important;font-size:7pt!important;line-height:0.9!important;letter-spacing:-0.2pt!important;margin:0 0 0.1mm!important;padding:0!important}\n#printArea.large-label .label-info{font-size:6.2pt!important;line-height:0.92!important}\n#printArea.large-label .label-meta-row{font-size:6.2pt!important;line-height:0.92!important;gap:0.8mm!important;margin:0!important;padding:0!important}\n#printArea.large-label .service-section-title{font-size:6.5pt!important;line-height:0.95!important;margin:0!important;padding:0!important}\n#printArea.large-label .label-next{margin-top:0.3mm!important}\n#printArea.large-label .service-print-group{margin-top:0.1mm!important;padding:0!important}\n#printArea.large-label .service-print-title{font-size:6.2pt!important;line-height:0.95!important;margin:0 0 0.05mm!important;padding:0!important}\n#printArea.large-label .service-print-items{column-gap:1mm!important;row-gap:0!important}\n#printArea.large-label .service-print-item{font-size:5.8pt!important;line-height:0.9!important;gap:0.5mm!important;margin:0!important;padding:0!important}\n#printArea.large-label .service-check{width:2.3mm!important;height:2.3mm!important;min-width:2.3mm!important;font-size:4.8pt!important}\n#printArea.large-label .service-print-note{font-size:5.8pt!important;line-height:0.95!important;margin:0!important;padding:0!important}";
  }
  css+="}";
  const styleId="detected-label-size";
