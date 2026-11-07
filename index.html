@@ -258,6 +258,13 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <button class="light" onclick="clearForm()">Vyčistiť formulár</button>
 
 </div>
+<div id="manualLabelSizeWrap" class="full">
+ <label for="manualLabelSize">Rozmer štítku (ručný výber, keď tlačiareň nie je pripojená)</label>
+ <select id="manualLabelSize">
+  <option value="small">50 × 30 mm – malá etiketa (náhľad 30 × 50 mm na stojato)</option>
+  <option value="large">50 × 90 mm – veľká etiketa</option>
+ </select>
+</div>
 <div id="appStatus" class="status">Vyber servisné položky a skontroluj ich v náhľade štítku.</div>
 </section>
 
@@ -435,7 +442,18 @@ function printerPacket(cmd,data=[]){
  packet.push(checksum,0xaa,0xaa);
  return new Uint8Array(packet);
 }
+function setManualLabelSize(value){
+ if(printerDevice?.gatt?.connected)return;
+ const profile=LABEL_PROFILES[value];
+ if(!profile)return;
+ applyLabelDimensions(profile.width,profile.height);
+ render();
+}
 function setPrinterState(connected,message){
+ const manualWrap=$('manualLabelSizeWrap');
+ const manualSelect=$('manualLabelSize');
+ if(manualWrap) manualWrap.hidden=!!connected;
+ if(manualSelect) manualSelect.value=activeLabelProfile===LABEL_PROFILES.large?"large":"small";
  const button=$('printerButton');
  button.classList.toggle('connected',connected);
  button.classList.toggle('disconnected',!connected);
@@ -1132,6 +1150,8 @@ document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date
 });
 document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.addEventListener('change',()=>{updateKmIntervalOptions();render()}));
 applyLabelDimensions(labelDimensions.width,labelDimensions.height);
+$('manualLabelSize').value=activeLabelProfile===LABEL_PROFILES.large?"large":"small";
+$('manualLabelSize').addEventListener('change',event=>setManualLabelSize(event.target.value));
 updateUnitLabels();
 restoreLabelFolder();
 </script>
