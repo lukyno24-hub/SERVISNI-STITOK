@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.2</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.3</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1046,29 +1046,14 @@ function updateMachineAutocomplete(){
   option.label=[item.name,item.number].filter(Boolean).join(" · ");
   datalist.appendChild(option);
  });
- if(query){
-  const exact=entries.find(item=>ownerMachineKey(item.machine)===query);
-  const unique=exact|| (matches.length===1?matches[0]:null);
-  if(unique){
-   $("ownerName").value=unique.name;
-   $("ownerNumber").value=unique.number;
-   autoFilledMachineKey=unique.key;
-   $("machineMatchStatus").textContent="Nájdené v kartotéke: "+unique.machine;
-  }else{
-   if(autoFilledMachineKey){
-    $("ownerName").value="";
-    $("ownerNumber").value="";
-    autoFilledMachineKey="";
-   }
-   $("machineMatchStatus").textContent=matches.length>1?"Nájdených "+matches.length+" zhôd. Vyber správny stroj zo zoznamu.": "Nový stroj – zatiaľ bez zhody v kartotéke.";
-  }
- }else{
-  if(autoFilledMachineKey){
-   $("ownerName").value="";
-   $("ownerNumber").value="";
-   autoFilledMachineKey="";
-  }
+ if(!query){
   $("machineMatchStatus").textContent="";
+ }else if(matches.length>1){
+  $("machineMatchStatus").textContent="Nájdených "+matches.length+" zhôd. Vyber správny stroj zo zoznamu.";
+ }else if(matches.length===1){
+  $("machineMatchStatus").textContent="Nájdená zhoda v kartotéke. Vyber ju zo zoznamu, ak ju chceš načítať.";
+ }else{
+  $("machineMatchStatus").textContent="Nový stroj – zatiaľ bez zhody v kartotéke.";
  }
 }
 function updateOwnerAutocomplete(field){
@@ -1753,8 +1738,7 @@ $('machine').addEventListener('change',()=>{
   autoFilledMachineKey=match.key;
   $('machineMatchStatus').textContent="Načítané z kartotéky: "+match.machine;
  }else{
-  loadOwnerForMachine();
-  $('machineMatchStatus').textContent="";
+  $('machineMatchStatus').textContent="Nový stroj – bez presnej zhody v kartotéke.";
  }
  saveInternalMachineRecord();
 });
