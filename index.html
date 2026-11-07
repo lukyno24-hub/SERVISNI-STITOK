@@ -975,6 +975,7 @@ function loadOwnerForMachine(){
  $("ownerNumber").value=owner?.number||"";
 }
 let autoFilledMachineKey="";
+let editingInternalService=null;
 function getMachineDirectoryEntries(){
  const internal=readInternalRecords();
  const owners=readOwnerDirectory();
@@ -1165,15 +1166,31 @@ function saveInternalMachineRecord(extraRecord=null){
   return false;
  }
  const directory=readInternalRecords();
- const internalRecords=Array.isArray(records)?[...records]:[];
+ const existing=directory[key]||{};
+ let internalRecords=Array.isArray(existing.records)?[...existing.records]:[];
+ const currentRecords=Array.isArray(records)?records:[];
+ // Úprava majiteľa ani zmena poľa stroja nesmie vymazať doterajšiu históriu.
+ if(currentRecords.length){
+  currentRecords.forEach(record=>{
+   const signature=value=>["date","current","unit","description","nextDate","nextKm"].map(field=>String(value[field]||"")).join("|");
+   if(!internalRecords.some(saved=>signature(saved)===signature(record)))internalRecords.push(record);
+  });
+ }
  if(extraRecord){
-  const last=internalRecords[internalRecords.length-1];
-  const same=last&&["date","current","unit","description","nextDate","nextKm"].every(field=>String(last[field]||"")===String(extraRecord[field]||""));
-  if(!same)internalRecords.push(extraRecord);
+  const signature=value=>["date","current","unit","description","nextDate","nextKm"].map(field=>String(value[field]||"")).join("|");
+  if(editingInternalService&&editingInternalService.key===key){
+   const index=editingInternalService.index;
+   if(Number.isInteger(index)&&index>=0&&index<internalRecords.length)internalRecords[index]=extraRecord;
+   else if(!internalRecords.some(saved=>signature(saved)===signature(extraRecord)))internalRecords.push(extraRecord);
+   editingInternalService=null;
+  }else if(!internalRecords.some(saved=>signature(saved)===signature(extraRecord))){
+   internalRecords.push(extraRecord);
+  }
  }
  const ownerName=$("ownerName").value.trim();
  const ownerNumber=$("ownerNumber").value.trim();
  directory[key]={
+  ...existing,
   machine:machineName,
   ownerName,
   ownerNumber,
@@ -1186,6 +1203,7 @@ function saveInternalMachineRecord(extraRecord=null){
   if(ownerName||ownerNumber)owners[key]={name:ownerName,number:ownerNumber,updatedAt:new Date().toISOString()};
   else delete owners[key];
   localStorage.setItem(OWNER_STORAGE_KEY,JSON.stringify(owners));
+  if(!$("filingCabinet").hidden)renderFilingCabinet();
   return true;
  }catch(e){
   $("saveCopyStatus").textContent="Interný záznam sa nepodarilo uložiť do kartotéky. Skontroluj voľné miesto v zariadení.";
@@ -1208,6 +1226,7 @@ function openInternalServiceRecord(key,index){
  const item=readInternalRecords()[key];
  if(!item||!item.records?.[index])return;
  const selected=item.records[index];
+ editingInternalService={key,index};
  $("machine").value=item.machine||"";
  $("ownerName").value=item.ownerName||"";
  $("ownerNumber").value=item.ownerNumber||"";
