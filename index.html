@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.6</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.7</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -198,6 +198,12 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
    <button type="button" class="light" onclick="closeFilingCabinet()">Zavrieť</button>
   </div>
   <input id="filingSearch" type="search" placeholder="Hľadať podľa stroja, mena alebo čísla">
+  <label for="filingSort" style="margin-top:10px">Zoradiť kartotéku podľa</label>
+  <select id="filingSort" style="width:100%;padding:10px;border:1px solid #cfd4dc;border-radius:7px;font:inherit;background:#fff;margin-bottom:8px">
+   <option value="machine">Označenia stroja</option>
+   <option value="ownerName">Mena</option>
+   <option value="ownerNumber">Čísla</option>
+  </select>
   <div id="filingCabinetList" class="filing-cabinet-list"></div>
   <button type="button" class="light" onclick="changeLabelFolder()">📁 Zmeniť priečinok</button>
  </div>
@@ -1457,7 +1463,14 @@ function renderFilingCabinet(){
  }).filter(item=>{
   const searchable=[item.machine,item.ownerName,item.ownerNumber].join(" ").toLocaleLowerCase("sk-SK");
   return !query||searchable.includes(query);
- }).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+ });
+ const sortField=$("filingSort")?.value||"machine";
+ entries.sort((a,b)=>{
+  const av=String(a[sortField]||"").trim();
+  const bv=String(b[sortField]||"").trim();
+  const comparison=av.localeCompare(bv,"sk",{sensitivity:"base",numeric:true});
+  return comparison||String(a.machine||"").localeCompare(String(b.machine||""),"sk",{sensitivity:"base",numeric:true});
+ });
  $("filingCabinetList").innerHTML=entries.length?entries.map(item=>{
   const serviceRecords=(item.records||[]).slice().reverse();
   const owner=[item.ownerName,item.ownerNumber].filter(Boolean).join(" · ")||"Majiteľ nie je vyplnený";
@@ -1816,6 +1829,7 @@ $('machine').addEventListener('change',()=>{
  scheduleFormDraftSave();
 });
 $('filingSearch').addEventListener('input',renderFilingCabinet);
+ $('filingSort').addEventListener('change',renderFilingCabinet);
 $('ownerName').addEventListener('input',()=>updateOwnerAutocomplete("name"));
 $('ownerNumber').addEventListener('input',()=>updateOwnerAutocomplete("number"));
 $('ownerName').addEventListener('change',()=>{
