@@ -1232,6 +1232,13 @@ let viewingInternalService=false;
 function setInternalFormReadOnly(readOnly){
  const panel=$("serviceFormPanel");
  if(!panel)return;
+ // Pri prezeraní uloženého zásahu necháme v ovládaní iba náhľad jeho uloženého formátu.
+ const previewSelector=$("previewSizeButton");
+ if(previewSelector&&previewSelector.options.length>=3){
+  previewSelector.options[1].hidden=readOnly;
+  previewSelector.options[2].hidden=readOnly;
+  previewSelector.value="preview";
+ }
  panel.querySelectorAll("input,select,textarea,button").forEach(el=>{
   if(el.id==="clearFormButton")return;
   el.disabled=readOnly;
