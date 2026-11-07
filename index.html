@@ -55,7 +55,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-service-date{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px}
 .filing-service-printed{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#344054;margin:0}
 .filing-service-printed input{width:13px;height:13px;margin:0;accent-color:var(--green);padding:0}
-.filing-service-print-count{font-size:11px;color:#344054;font-weight:600}
+.filing-service-print-number{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:5px;background:#eef2f6;color:#344054;font-size:12px;font-weight:700}
 .filing-service-entry strong{font-size:13px;margin:0 0 3px}
 .filing-service-entry>div{font-size:13px;overflow-wrap:anywhere}
 .filing-service-entry .small{font-size:11px;color:var(--muted);margin-top:3px}
@@ -137,7 +137,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .preview-stage{display:flex;justify-content:center;align-items:flex-start;background:#edf0f3;padding:12px;border-radius:10px;overflow:auto}
 .preview-actions{display:flex;gap:9px;margin-top:12px}.preview-actions button{flex:1}
 .preview-print-status{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:13px;font-weight:600}
-.preview-print-status input{width:17px;height:17px;margin:0;accent-color:var(--green)}
+.preview-print-status input{width:58px;height:30px;margin:0;padding:3px 5px;text-align:center;font-size:13px;font-weight:700}
 .preview-print-status span{font-size:12px;font-weight:600;color:#344054}
 .preview-print-status[hidden]{display:none!important}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.full{grid-column:auto}.actions .full{grid-column:auto}.preview-dialog{padding:12px}.preview-actions{flex-direction:column}}
@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.6</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.7</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -333,9 +333,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <button id="previewPrintButton" class="primary" type="button" onclick="handlePreviewPrint()">🖨️ Uložiť a tlačiť štítok</button>
 </div>
 <div id="previewPrintedStatus" class="preview-print-status" hidden>
- <label for="previewPrintedCheckbox">Vytlačené</label>
- <input id="previewPrintedCheckbox" type="checkbox">
- <span id="previewPrintCount"></span>
+ <label for="previewPrintCountInput">Vytlačené</label>
+ <input id="previewPrintCountInput" type="number" min="0" step="1" value="0" aria-label="Počet výtlačkov">
+ <span>výtlačkov</span>
 </div>
 <div id="saveCopyStatus" class="save-copy-status" role="status">Pri tlači sa uloží aj PNG kópia etikety.</div>
 </div></div>
@@ -1415,9 +1415,8 @@ function renderFilingCabinet(){
    const date=record.date?fmtDate(record.date):"Bez dátumu";
    const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
    const originalIndex=(item.records||[]).length-1-index;
-   const printCount=Number(record.printCount)||0;
-   const printCountText=printCount>0?' · '+printCount+'. výtlačok':'';
-   const printedStatus=record.printed===true?'<label class="filing-service-printed">Vytlačené <input type="checkbox" disabled checked></label><span class="filing-service-print-count">'+printCountText+'</span>':'<label class="filing-service-printed">Vytlačené <input type="checkbox" disabled></label><span class="filing-service-print-count">'+printCountText+'</span>';
+   const printCount=Math.max(0,Number(record.printCount)||(record.printed===true?1:0));
+   const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+printCount+'</strong></span>';
    return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
   return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
@@ -1595,30 +1594,31 @@ function updatePreviewActionMode(){
  const printButton=$("previewPrintButton");
  const saveCopyStatus=$("saveCopyStatus");
  const printedStatus=$("previewPrintedStatus");
- const printedCheckbox=$("previewPrintedCheckbox");
+ const printCountInput=$("previewPrintCountInput");
  if(!saveButton||!printButton)return;
  saveButton.hidden=!!viewingInternalService;
  printButton.textContent=viewingInternalService?"🖨️ Tlačiť":"🖨️ Uložiť a tlačiť štítok";
  if(saveCopyStatus)saveCopyStatus.hidden=!!viewingInternalService;
  if(printedStatus)printedStatus.hidden=!viewingInternalService;
- if(viewingInternalService&&viewingInternalServiceRef&&printedCheckbox){
+ if(viewingInternalService&&viewingInternalServiceRef&&printCountInput){
   const {key,index}=viewingInternalServiceRef;
   const item=readInternalRecords()[key];
   const record=item&&item.records&&item.records[index];
-  printedCheckbox.checked=!!(record&&record.printed===true);
-  const count=Number(record?.printCount)||0;
-  $("previewPrintCount").textContent=count>0?"· "+count+". výtlačok"+(count===1?"":""): "";
+  printCountInput.value=String(Math.max(0,Number(record?.printCount)||(record?.printed===true?1:0)));
  }
 }
-function setViewedServicePrinted(checked){
+function setViewedServicePrintCount(value){
  if(!viewingInternalServiceRef)return;
+ const count=Math.max(0,Math.floor(Number(value)||0));
  const {key,index}=viewingInternalServiceRef;
  const directory=readInternalRecords();
  const item=directory[key];
  if(!item||!Array.isArray(item.records)||!item.records[index])return;
- item.records[index].printed=!!checked;
- if(checked)item.records[index].printedAt=item.records[index].printedAt||new Date().toISOString();
- else delete item.records[index].printedAt;
+ const record=item.records[index];
+ record.printCount=count;
+ record.printed=count>0;
+ if(count>0)record.printedAt=record.printedAt||new Date().toISOString();
+ else delete record.printedAt;
  item.updatedAt=new Date().toISOString();
  directory[key]=item;
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
@@ -1632,14 +1632,13 @@ function markViewedServiceAsPrinted(){
  const record=item.records[index];
  const previousCount=Number(record.printCount)||(record.printed===true?1:0);
  record.printCount=previousCount+1;
- record.printed=true;
+ record.printed=record.printCount>0;
  record.printedAt=new Date().toISOString();
  item.updatedAt=new Date().toISOString();
  directory[key]=item;
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
- const checkbox=$("previewPrintedCheckbox");
- if(checkbox)checkbox.checked=true;
- $("previewPrintCount").textContent="· "+record.printCount+". výtlačok";
+ const countInput=$("previewPrintCountInput");
+ if(countInput)countInput.value=String(record.printCount);
 }
 function handlePreviewPrint(){
  if(viewingInternalService){
@@ -1662,7 +1661,7 @@ function openPreview(){
 function closePreview(){
  $('previewModal').classList.remove('open');
 }
-$("previewPrintedCheckbox").addEventListener("change",event=>setViewedServicePrinted(event.target.checked));
+$("previewPrintCountInput").addEventListener("change",event=>setViewedServicePrintCount(event.target.value));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
 function updateUnitLabels(){
  const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
