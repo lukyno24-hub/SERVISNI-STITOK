@@ -1176,7 +1176,8 @@ function saveInternalMachineRecord(extraRecord=null){
  if(currentRecords.length){
   currentRecords.forEach(record=>{
    const signature=value=>["date","current","unit","description","nextDate","nextKm"].map(field=>String(value[field]||"")).join("|");
-   if(!internalRecords.some(saved=>signature(saved)===signature(record)))internalRecords.push(record);
+   const matchIndex=internalRecords.findIndex(saved=>signature(saved)===signature(record));
+   if(matchIndex<0)internalRecords.push(record);
   });
  }
  if(extraRecord){
@@ -1186,8 +1187,10 @@ function saveInternalMachineRecord(extraRecord=null){
    if(Number.isInteger(index)&&index>=0&&index<internalRecords.length)internalRecords[index]=extraRecord;
    else if(!internalRecords.some(saved=>signature(saved)===signature(extraRecord)))internalRecords.push(extraRecord);
    editingInternalService=null;
-  }else if(!internalRecords.some(saved=>signature(saved)===signature(extraRecord))){
-   internalRecords.push(extraRecord);
+  }else{
+   const matchIndex=internalRecords.findIndex(saved=>signature(saved)===signature(extraRecord));
+   if(matchIndex<0)internalRecords.push(extraRecord);
+   else internalRecords[matchIndex]={...internalRecords[matchIndex],labelProfile:extraRecord.labelProfile||activeLabelProfile.id};
   }
  }
  const ownerName=$("ownerName").value.trim();
@@ -1252,6 +1255,8 @@ function openInternalServiceRecord(key,index){
  if(!item||!item.records?.[index])return;
  const selected=item.records[index];
  editingInternalService=null;
+ const savedProfile=Object.values(LABEL_PROFILES).find(profile=>profile.id===selected.labelProfile);
+ if(savedProfile)applyLabelDimensions(savedProfile.width,savedProfile.height);
  $("machine").value=item.machine||"";
  $("ownerName").value=item.ownerName||"";
  $("ownerNumber").value=item.ownerNumber||"";
@@ -1457,7 +1462,8 @@ async function saveLabelCopy(){
    unit,
    description,
    nextDate:$("nextDate").value,
-   nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():""
+   nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():"",
+   labelProfile:activeLabelProfile.id
   };
  }
  if(!saveInternalMachineRecord(draft))return;
@@ -1479,7 +1485,8 @@ function printAndSaveLabel(){
    unit,
    description,
    nextDate:$("nextDate").value,
-   nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():""
+   nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():"",
+   labelProfile:activeLabelProfile.id
   };
   saveInternalMachineRecord(draft);
  }else{
