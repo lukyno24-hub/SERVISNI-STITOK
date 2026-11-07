@@ -108,6 +108,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 #qrcode img,#qrcode canvas,#qrcode svg{width:26mm!important;height:26mm!important;max-width:none!important;max-height:none!important;display:block}
 .preview-launch{background:#6f42c1;color:white}
 #previewSizeButton{display:block;width:100%;min-height:46px;padding:12px 38px 12px 14px;border:0;border-radius:8px;background:#6f42c1;color:#fff;font-family:inherit;font-size:17px;font-weight:700;line-height:1.25;text-align:center;text-align-last:center;cursor:pointer;}
+#previewSizeButton.preview-read-only{appearance:none;-webkit-appearance:none;background-image:none!important;padding-right:14px;cursor:pointer;}
 #previewModal{display:none;position:fixed;inset:0;z-index:1000;background:#0009;padding:16px;overflow:auto;align-items:center;justify-content:center}
 #previewModal.open{display:flex}
 .preview-dialog{width:min(100%,440px);max-height:calc(100vh - 32px);overflow:auto;background:white;border-radius:14px;padding:16px;box-shadow:0 12px 40px #0005}
@@ -290,7 +291,6 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <option value="small">Vybrať malú etiketu 50 × 30 mm</option>
  <option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>
 </select>
-<button id="previewReadOnlyButton" class="preview-launch full" type="button" onclick="openPreview()" hidden>👁 Náhľad štítku</button>
 <button id="clearFormButton" class="light" onclick="clearForm()">Vyčistiť formulár</button>
 </div>
 <div id="appStatus" class="status">Vyber servisné položky a skontroluj ich v náhľade štítku.</div>
@@ -1235,11 +1235,9 @@ function setInternalFormReadOnly(readOnly){
  if(!panel)return;
  // Pri prezeraní uloženého zásahu necháme v ovládaní iba náhľad jeho uloženého formátu.
  const previewSelector=$("previewSizeButton");
- const previewReadOnlyButton=$("previewReadOnlyButton");
- if(previewSelector&&previewReadOnlyButton){
-  previewSelector.hidden=readOnly;
-  previewReadOnlyButton.hidden=!readOnly;
-  previewReadOnlyButton.textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+ if(previewSelector){
+  previewSelector.classList.toggle("preview-read-only",readOnly);
+  previewSelector.title=readOnly?"Kliknutím otvoríš náhľad uloženého rozmeru etikety.":"Vyber rozmer štítku alebo otvor náhľad.";
  }
  if(previewSelector&&previewSelector.options.length>=3){
   previewSelector.options[1].hidden=readOnly;
