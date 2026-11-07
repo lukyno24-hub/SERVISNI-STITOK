@@ -71,6 +71,24 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .history-machine{font-size:14px;font-weight:bold;margin:0 0 10px;color:#344054}
 .label-preview{width:30mm;height:50mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:1mm;background:white;color:#111;overflow:hidden}
 .label-preview.saving-copy{border:0!important}
+.label-rows{display:none;flex:0 0 auto;min-height:0;width:100%;overflow:hidden}
+.label-row{height:2.35mm;min-height:2.35mm;max-height:2.35mm;display:flex;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:6.2pt;line-height:1;padding:0 0.2mm}
+.label-row.center{text-align:center;justify-content:center;font-weight:bold}
+.label-row.bold{font-weight:bold}
+.label-row.small{font-size:5.8pt}
+.label-preview.large-label .label-rows{display:block}
+.label-preview.large-label #labelCurrent,.label-preview.large-label #labelNext{display:none!important}
+.label-preview.large-label .qr-bottom{margin:1mm auto 0!important}
+.label-preview.large-label{padding:2mm!important}
+.label-preview.large-label .label-header{font-size:6pt!important;line-height:0.95!important;margin:0 0 0.5mm!important}
+.label-preview.large-label .header-contact-row{font-size:6pt!important;line-height:0.9!important}
+.label-preview.large-label h3{font-size:7pt!important;line-height:0.9!important}
+@media print{
+ #printArea.large-label .label-rows{display:block!important}
+ #printArea.large-label .label-row{height:2.35mm!important;min-height:2.35mm!important;max-height:2.35mm!important;font-size:6.2pt!important;line-height:1!important}
+ #printArea.large-label .label-row.small{font-size:5.8pt!important}
+ #printArea.large-label .qr-bottom{margin:1mm auto 0!important}
+}
 .label-header{text-align:center;font-size:5.2pt;line-height:0.9;margin:0 0 0.4mm;overflow-wrap:anywhere;flex:0 0 auto}.header-email{font-size:4.2pt;line-height:0.85;white-space:nowrap;letter-spacing:-0.18pt;overflow:hidden}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:4.8pt;line-height:0.85}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0;text-align:center;font-size:5.8pt;line-height:0.9;letter-spacing:-0.15pt}
 .label-info{font-size:5.4pt;line-height:0.9;overflow-wrap:anywhere;min-height:0}
 .service-section-title{display:block;text-align:center;font-weight:bold;font-size:5.6pt;line-height:0.9}
@@ -273,8 +291,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="header-contact-row"><span>Slovany 112</span><span>0944379060</span></div>
 <div class="header-email">serviscentrumnahalka@gmail.com</div>
 </div>
-<div class="label-info" id="labelCurrent">Zatiaľ bez servisného záznamu.</div>
-<div class="label-info label-next" id="labelNext"></div>
+<div id="labelRows" class="label-rows" aria-label="Text štítku, najviac 15 riadkov"></div>
+<div class="label-info" id="labelCurrent" hidden></div>
+<div class="label-info label-next" id="labelNext" hidden></div>
 <div class="qr-bottom"><div id="qrcode" aria-label="QR kód kompletnej servisnej histórie"></div></div>
 </section></div>
 <div class="preview-actions"><button class="light" type="button" onclick="closePreview()">Zavrieť</button><button class="primary" type="button" onclick="printAndSaveLabel()">🖨️ Uložiť a tlačiť štítok</button></div>
@@ -661,19 +680,42 @@ function render(){
   nextKm:unit==="km"?$('nextKm').value.trim():unit==="mh"?$('nextKmManual').value.trim():""
  }:last;
  $('labelTitle').textContent="SERVISCENTRUM NAHALKA";
+ $('labelRows').innerHTML="";
  if(!shown){
-  $('labelCurrent').textContent="Zatiaľ bez servisného záznamu.";
+  $('labelRows').innerHTML='<div class="label-row center">Zatiaľ bez servisného záznamu.</div>';
+  $('labelCurrent').textContent="";
   $('labelNext').textContent="";
   $('qrcode').innerHTML="";
   return;
  }
  const hasUnit=shown.unit==="km"||shown.unit==="mh";
  const unitText=shown.unit==="mh"?"MTH":"KM";
- const serviceLines=formatServiceForLabel(shown.description||"");
- const currentMeta=hasUnit&&shown.current?'<div class="label-meta-row"><span class="meta-value">'+unitText+": "+escapeHtml(shown.current)+'</span></div>':"";
- const nextMeta=hasUnit&&shown.nextKm?'<div class="label-meta-row"><span class="meta-value">'+unitText+": "+escapeHtml(shown.nextKm)+'</span></div>':"";
- $('labelCurrent').innerHTML='<b class="service-section-title">Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.date))+'</span></div>'+currentMeta+serviceLines;
- $('labelNext').innerHTML='<b class="service-section-title">Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.nextDate))+'</span></div>'+nextMeta;
+ const labelRows=[
+  {text:"POSLEDNÝ SERVIS",kind:"center"},
+  {text:"Dátum: "+fmtDate(shown.date),kind:""},
+ ];
+ if(hasUnit&&shown.current) labelRows.push({text:unitText+": "+shown.current,kind:"bold"});
+ String(shown.description||"").split(" | ").filter(Boolean).forEach(section=>{
+  const colon=section.indexOf(":");
+  if(colon<0){labelRows.push({text:section,kind:"small"});return;}
+  const title=section.slice(0,colon).trim();
+  const values=section.slice(colon+1).split(",").map(v=>v.trim()).filter(Boolean);
+  labelRows.push({text:title+": "+values.join(" · "),kind:""});
+ });
+ labelRows.push({text:"NASLEDUJÚCI SERVIS",kind:"center"});
+ labelRows.push({text:"Dátum: "+fmtDate(shown.nextDate),kind:""});
+ if(hasUnit&&shown.nextKm) labelRows.push({text:unitText+": "+shown.nextKm,kind:"bold"});
+ const limitedRows=labelRows.slice(0,15);
+ limitedRows.forEach(row=>{
+  const el=document.createElement("div");
+  el.className="label-row "+(row.kind||"");
+  el.textContent=row.text;
+  el.title=row.text;
+  $('labelRows').appendChild(el);
+ });
+ $('labelCurrent').textContent="";
+ $('labelNext').textContent="";
+
  $('qrcode').innerHTML="";
  if(typeof qrcode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
