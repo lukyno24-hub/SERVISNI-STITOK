@@ -1112,21 +1112,32 @@ async function stopScan(){if(activeScanner){try{await activeScanner.stop();activ
 
 function clearForm(){
  if(viewingInternalService){returnToFilingCabinet();return;}
+ // Vyčistiť všetky vstupné polia aktuálneho formulára; uložená kartotéka sa nemení.
+ $('machine').value="";
+ $('ownerName').value="";
+ $('ownerNumber').value="";
+ $('machineMatchStatus').textContent="";
+ $('ownerMatchStatus').textContent="";
  $('date').value=today();
  $('current').value="";
  $('nextDate').value="";
  $('nextKmManual').value="";
+ $('nextKm').value="";
+ $('nextDateDisplay').textContent="Vyber obdobie";
+ $('filingSearch').value="";
  document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.checked=false);
  document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
- $('nextDateDisplay').textContent="Vyber obdobie";
- $('nextKm').value="";
  document.querySelectorAll('input[name="unit"]').forEach(el=>{el.checked=false;el.dataset.wasSelected="false";});
- updateUnitLabels();
  document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
  $('fluidType').value="DOT 4";
  $('extraNote').value="";
+ autoFilledMachineKey="";
+ editingInternalService=null;
+ document.querySelectorAll('details.service-group').forEach(el=>el.open=false);
+ updateUnitLabels();
+ updateKmIntervalOptions();
  render();
- $('appStatus').textContent="Výber nového servisu bol vyčistený. História načítaná z QR kódu zostáva.";
+ $('appStatus').textContent="Všetky polia formulára boli vyčistené. Záznamy v kartotéke zostali zachované.";
 }
 let labelFolderHandle=null;
 const LABEL_FOLDER_DB="servisnyAsistentLabelStorage";
