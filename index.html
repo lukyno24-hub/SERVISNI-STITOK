@@ -298,17 +298,17 @@ const $=id=>document.getElementById(id);
 function applyLabelDimensions(width,height){
  width=Number(width);height=Number(height);
  if(!Number.isFinite(width)||!Number.isFinite(height)||width<10||width>100||height<10||height>200)return false;
- // RFID môže hlásiť kotúč ako 50 × 30, hoci tlačová plocha malej etikety je na stojato 30 × 50.
- const isSmallPortrait=Math.abs(width-50)<0.2&&Math.abs(height-30)<0.2;
- const layoutWidth=isSmallPortrait?height:width;
- const layoutHeight=isSmallPortrait?width:height;
+ // Používame orientáciu na stojato, ako v pôvodných verziách projektu.
+ let layoutWidth=width,layoutHeight=height;
+ if(layoutWidth>layoutHeight){const swap=layoutWidth;layoutWidth=layoutHeight;layoutHeight=swap;}
  labelDimensions={width:layoutWidth,height:layoutHeight};
- const isLarge=Math.abs(width-50)<0.2&&Math.abs(height-90)<0.2;
+ const isLarge=Math.abs(layoutWidth-50)<0.2&&Math.abs(layoutHeight-90)<0.2;
+ const isSmall=Math.abs(layoutWidth-30)<0.2&&Math.abs(layoutHeight-50)<0.2;
  const widthText=layoutWidth+"mm",heightText=layoutHeight+"mm";
- const labelText=width+" × "+height+" mm";
+ const labelText=layoutWidth+" × "+layoutHeight+" mm";
  const area=$('printArea');
  area.classList.toggle("large-label",isLarge);
- area.classList.toggle("small-label",!isLarge);
+ area.classList.toggle("small-label",isSmall);
  $('previewHeading').textContent="Náhľad štítku "+labelText;
  document.querySelectorAll('.preview-launch').forEach(button=>button.textContent="👁 Náhľad štítku "+labelText);
  const qrSize=isLarge?40:26;
@@ -317,25 +317,7 @@ function applyLabelDimensions(width,height){
  css+="#printArea .qr-bottom{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode img,#printArea #qrcode canvas,#printArea #qrcode svg{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;}";
- if(isLarge){
-  css+="#printArea.large-label{padding:3mm!important;}";
-  css+="#printArea.large-label .label-header{text-align:center!important;font-size:7pt!important;line-height:1.2!important;margin:0 0 1mm!important;overflow-wrap:anywhere!important;flex:0 0 auto!important;}";
-  css+="#printArea.large-label .header-email{font-size:inherit!important;line-height:1.2!important;white-space:nowrap!important;letter-spacing:normal!important;overflow:hidden!important;}";
-  css+="#printArea.large-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:6pt!important;line-height:1.05!important;}";
-  css+="#printArea.large-label h3{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;width:100%!important;margin:0 0 0.3mm!important;text-align:center!important;font-size:7.5pt!important;line-height:1!important;letter-spacing:-0.15pt!important;}";
-  css+="#printArea.large-label .label-info{font-size:7.5pt!important;line-height:1.25!important;overflow-wrap:anywhere!important;min-height:0!important;}";
-  css+="#printArea.large-label .service-section-title{display:block!important;text-align:center!important;font-weight:bold!important;font-size:inherit!important;line-height:normal!important;}";
-  css+="#printArea.large-label .label-meta-row{display:flex!important;justify-content:space-between!important;align-items:baseline!important;gap:1.5mm!important;white-space:nowrap!important;width:100%!important;font-size:7.5pt!important;line-height:1.25!important;}";
-  css+="#printArea.large-label .label-meta-row .meta-value{text-align:right!important;font-weight:bold!important;flex:0 1 auto!important;min-width:0!important;letter-spacing:-0.1px!important;}";
-  css+="#printArea.large-label .label-meta-row .meta-date{flex:0 0 auto!important;}";
-  css+="#printArea.large-label .label-next{margin-top:1.5mm!important;}";
-  css+="#printArea.large-label .service-print-group{margin-top:1mm!important;}";
-  css+="#printArea.large-label .service-print-title{font-weight:bold!important;font-size:7.5pt!important;line-height:1.2!important;margin-bottom:0.5mm!important;text-align:center!important;}";
-  css+="#printArea.large-label .service-print-items{display:grid!important;grid-template-columns:1fr 1fr!important;column-gap:2mm!important;row-gap:0.5mm!important;}";
-  css+="#printArea.large-label .service-print-item{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:1mm!important;font-size:7pt!important;line-height:1.15!important;min-width:0!important;}";
-  css+="#printArea.large-label .service-check{width:3mm!important;height:3mm!important;min-width:3mm!important;border:0.3mm solid #111!important;font-size:6.5pt!important;}";
-  css+="#printArea.large-label .service-print-note{font-size:7pt!important;line-height:1.2!important;margin-top:1mm!important;}";
- }
+ if(isLarge){css+="#printArea.large-label{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}\n#printArea.large-label .label-header{text-align:center;font-size:7pt;line-height:1.2;margin:0 0 1mm;overflow-wrap:anywhere}\n#printArea.large-label .header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:6pt;line-height:1.05}\n#printArea.large-label h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:7.5pt;line-height:1;letter-spacing:-0.15pt}\n#printArea.large-label .label-info{font-size:7.5pt;line-height:1.25;overflow-wrap:anywhere}\n#printArea.large-label .service-section-title{display:block;text-align:center;font-weight:bold}\n#printArea.large-label .label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;white-space:nowrap;width:100%;font-size:7.5pt;line-height:1.25}\n#printArea.large-label #printArea.large-label .label-meta-row .meta-value{text-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}\n#printArea.large-label #printArea.large-label .label-meta-row .meta-date{flex:0 0 auto}\n#printArea.large-label .label-next{margin-top:1.5mm}\n#printArea.large-label .service-print-group{margin-top:1mm}\n#printArea.large-label .service-print-title{font-weight:bold;font-size:7.5pt;line-height:1.2;margin-bottom:0.5mm;text-align:center}\n#printArea.large-label #printArea.large-label .service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:2mm;row-gap:0.5mm}\n#printArea.large-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:1mm;font-size:7pt;line-height:1.15;min-width:0}\n#printArea.large-label #printArea.large-label .service-print-item .service-print-name{overflow-wrap:anywhere;min-width:0}\n#printArea.large-label .service-check{width:3mm;height:3mm;min-width:3mm;border:0.3mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:6.5pt;font-weight:bold;line-height:1}\n#printArea.large-label .service-print-note{font-size:7pt;line-height:1.2;margin-top:1mm}";}
  css+="@media print{";
  css+="@page{size:"+widthText+" "+heightText+";margin:0;}";
  css+="html,body{width:"+widthText+"!important;height:"+heightText+"!important;margin:0!important;padding:0!important;background:white!important;}";
@@ -349,21 +331,7 @@ function applyLabelDimensions(width,height){
  css+="#printArea #qrcode img,#printArea #qrcode canvas,#printArea #qrcode svg{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;display:block!important;}";
  if(isLarge){
   css+="#printArea.large-label{padding:2mm!important;}";
-  css+="#printArea.large-label .label-header{font-size:6pt!important;line-height:0.95!important;margin:0 0 0.35mm!important;flex:0 0 auto!important;}";
-  css+="#printArea.large-label .label-header>div{margin:0!important;padding:0!important;line-height:0.95!important;}";
-  css+="#printArea.large-label .header-email{font-size:6pt!important;line-height:0.95!important;white-space:nowrap!important;letter-spacing:normal!important;}";
-  css+="#printArea.large-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:6pt!important;line-height:0.9!important;}";
-  css+="#printArea.large-label h3{font-size:7pt!important;line-height:0.9!important;letter-spacing:-0.2pt!important;margin:0 0 0.1mm!important;padding:0!important;}";
-  css+="#printArea.large-label .label-info{font-size:6.2pt!important;line-height:0.92!important;}";
-  css+="#printArea.large-label .label-meta-row{font-size:6.2pt!important;line-height:0.92!important;gap:0.8mm!important;margin:0!important;padding:0!important;}";
-  css+="#printArea.large-label .service-section-title{font-size:6.5pt!important;line-height:0.95!important;margin:0!important;padding:0!important;}";
-  css+="#printArea.large-label .label-next{margin-top:0.3mm!important;}";
-  css+="#printArea.large-label .service-print-group{margin-top:0.1mm!important;padding:0!important;}";
-  css+="#printArea.large-label .service-print-title{font-size:6.2pt!important;line-height:0.95!important;margin:0 0 0.05mm!important;padding:0!important;}";
-  css+="#printArea.large-label .service-print-items{column-gap:1mm!important;row-gap:0!important;}";
-  css+="#printArea.large-label .service-print-item{font-size:5.8pt!important;line-height:0.9!important;gap:0.5mm!important;margin:0!important;padding:0!important;}";
-  css+="#printArea.large-label .service-check{width:2.3mm!important;height:2.3mm!important;min-width:2.3mm!important;font-size:4.8pt!important;}";
-  css+="#printArea.large-label .service-print-note{font-size:5.8pt!important;line-height:0.95!important;margin:0!important;padding:0!important;}";
+  css+="#printArea.large-label .label-header{font-size:6pt!important;line-height:0.95!important;margin:0 0 0.35mm!important}\n#printArea.large-label .label-header>div{margin:0!important;padding:0!important;line-height:0.95!important}\n#printArea.large-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:6pt!important;line-height:0.9!important}\n#printArea.large-label h3{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;width:100%!important;font-size:7pt!important;line-height:0.9!important;letter-spacing:-0.2pt!important;margin:0 0 0.1mm!important;padding:0!important}\n#printArea.large-label .label-info{font-size:6.2pt!important;line-height:0.92!important}\n#printArea.large-label .label-meta-row{font-size:6.2pt!important;line-height:0.92!important;gap:0.8mm!important;margin:0!important;padding:0!important}\n#printArea.large-label .service-section-title{font-size:6.5pt!important;line-height:0.95!important;margin:0!important;padding:0!important}\n#printArea.large-label .label-next{margin-top:0.3mm!important}\n#printArea.large-label .service-print-group{margin-top:0.1mm!important;padding:0!important}\n#printArea.large-label .service-print-title{font-size:6.2pt!important;line-height:0.95!important;margin:0 0 0.05mm!important;padding:0!important}\n#printArea.large-label #printArea.large-label .service-print-items{column-gap:1mm!important;row-gap:0!important}\n#printArea.large-label .service-print-item{font-size:5.8pt!important;line-height:0.9!important;gap:0.5mm!important;margin:0!important;padding:0!important}\n#printArea.large-label .service-check{width:2.3mm!important;height:2.3mm!important;min-width:2.3mm!important;font-size:4.8pt!important}\n#printArea.large-label .service-print-note{font-size:5.8pt!important;line-height:0.95!important;margin:0!important;padding:0!important}";
  }
  css+="}";
  const styleId="detected-label-size";
