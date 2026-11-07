@@ -298,9 +298,13 @@ const $=id=>document.getElementById(id);
 function applyLabelDimensions(width,height){
  width=Number(width);height=Number(height);
  if(!Number.isFinite(width)||!Number.isFinite(height)||width<10||width>100||height<10||height>200)return false;
- labelDimensions={width,height};
+ // RFID môže hlásiť kotúč ako 50 × 30, hoci tlačová plocha malej etikety je na stojato 30 × 50.
+ const isSmallPortrait=Math.abs(width-50)<0.2&&Math.abs(height-30)<0.2;
+ const layoutWidth=isSmallPortrait?height:width;
+ const layoutHeight=isSmallPortrait?width:height;
+ labelDimensions={width:layoutWidth,height:layoutHeight};
  const isLarge=Math.abs(width-50)<0.2&&Math.abs(height-90)<0.2;
- const widthText=width+"mm",heightText=height+"mm";
+ const widthText=layoutWidth+"mm",heightText=layoutHeight+"mm";
  const labelText=width+" × "+height+" mm";
  const area=$('printArea');
  area.classList.toggle("large-label",isLarge);
@@ -310,8 +314,6 @@ function applyLabelDimensions(width,height){
  const qrSize=isLarge?40:26;
  let css="";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;}";
- // Na obrazovke zostane dialóg dostatočne široký aj pre ovládacie tlačidlá;
- // presné rozmery stránky nastavujeme iba pri tlači.
  css+="#printArea .qr-bottom{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode img,#printArea #qrcode canvas,#printArea #qrcode svg{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;}";
