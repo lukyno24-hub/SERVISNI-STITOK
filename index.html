@@ -312,8 +312,8 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="qr-bottom"><div id="qrcode" aria-label="QR kód kompletnej servisnej histórie"></div></div>
 </section></div>
 <div class="preview-actions">
-<button class="secondary" type="button" onclick="saveLabelCopy().catch(error=>$('saveCopyStatus').textContent='Uloženie zlyhalo: '+(error?.message||String(error)))">💾 Uložiť štítok</button>
-<button class="primary" type="button" onclick="printAndSaveLabel()">🖨️ Uložiť a tlačiť štítok</button>
+<button id="previewSaveButton" class="secondary" type="button" onclick="saveLabelCopy().catch(error=>$('saveCopyStatus').textContent='Uloženie zlyhalo: '+(error?.message||String(error)))">💾 Uložiť štítok</button>
+<button id="previewPrintButton" class="primary" type="button" onclick="handlePreviewPrint()">🖨️ Uložiť a tlačiť štítok</button>
 </div>
 <div id="saveCopyStatus" class="save-copy-status" role="status">Pri tlači sa uloží aj PNG kópia etikety.</div>
 </div></div>
@@ -1529,8 +1529,23 @@ function printAndSaveLabel(){
   $('saveCopyStatus').textContent="Kópiu sa nepodarilo uložiť: "+(error?.message||String(error));
  });
 }
+function updatePreviewActionMode(){
+ const saveButton=$("previewSaveButton");
+ const printButton=$("previewPrintButton");
+ if(!saveButton||!printButton)return;
+ saveButton.hidden=!!viewingInternalService;
+ printButton.textContent=viewingInternalService?"🖨️ Tlačiť":"🖨️ Uložiť a tlačiť štítok";
+}
+function handlePreviewPrint(){
+ if(viewingInternalService){
+  window.print();
+  return;
+ }
+ printAndSaveLabel();
+}
 function openPreview(){
- // Otvoriť okno najprv, aby prípadná chyba QR kódu nezablokovala náhľad.
+ // Otvoriť pôvodný náhľad; pri prezeraní histórie ponúknuť iba tlač.
+ updatePreviewActionMode();
  $('previewModal').classList.add('open');
  try{
   render();
