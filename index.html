@@ -1049,15 +1049,21 @@ function readInternalRecords(){
  try{return JSON.parse(localStorage.getItem(INTERNAL_RECORDS_KEY)||"{}")||{};}
  catch(e){return {};}
 }
-function saveInternalMachineRecord(){
+function saveInternalMachineRecord(extraRecord=null){
  const key=ownerMachineKey($("machine").value);
  if(!key)return;
  const directory=readInternalRecords();
+ const internalRecords=Array.isArray(records)?[...records]:[];
+ if(extraRecord){
+  const last=internalRecords[internalRecords.length-1];
+  const same=last&&["date","current","unit","description","nextDate","nextKm"].every(field=>String(last[field]||"")===String(extraRecord[field]||""));
+  if(!same)internalRecords.push(extraRecord);
+ }
  directory[key]={
   machine:$("machine").value.trim(),
   ownerName:$("ownerName").value.trim(),
   ownerNumber:$("ownerNumber").value.trim(),
-  records:Array.isArray(records)?records:[],
+  records:internalRecords,
   updatedAt:new Date().toISOString()
  };
  try{localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));}
@@ -1174,6 +1180,22 @@ async function saveLabelCopy(){
  $('saveCopyStatus').textContent=destination==="folder"?"Kópia štítku bola uložená do nastaveného priečinka.":"Kópia štítku bola stiahnutá. Skontroluj priečinok Sťahovanie.";
 }
 function printAndSaveLabel(){
+ // Uložíme aj aktuálny servis do internej kartotéky; do QR ani na štítok sa majiteľ nepridáva.
+ const description=buildServiceDescription();
+ if(description){
+  const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
+  const draft={
+   date:$("date").value,
+   current:unit?$("current").value.trim():"",
+   unit,
+   description,
+   nextDate:$("nextDate").value,
+   nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():""
+  };
+  saveInternalMachineRecord(draft);
+ }else{
+  saveInternalMachineRecord();
+ }
  // Tlač sa spustí priamo v kliknutí používateľa; kópia sa uloží po zavretí tlačového dialógu.
  window.print();
  saveLabelCopy().catch(error=>{
