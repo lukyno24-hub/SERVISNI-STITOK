@@ -312,6 +312,25 @@ function applyLabelDimensions(width,height){
  $('previewHeading').textContent="Náhľad štítku "+labelText;
  document.querySelectorAll('.preview-launch').forEach(button=>button.textContent="👁 Náhľad štítku "+labelText);
  const qrSize=isLarge?40:26;
+ const qrBox=area.querySelector(".qr-bottom");
+ const qrElement=$("qrcode");
+ if(qrBox&&qrElement){
+  [qrBox,qrElement].forEach(el=>{
+   el.style.setProperty("width",qrSize+"mm","important");
+   el.style.setProperty("height",qrSize+"mm","important");
+   el.style.setProperty("min-width",qrSize+"mm","important");
+   el.style.setProperty("min-height",qrSize+"mm","important");
+   el.style.setProperty("flex","0 0 "+qrSize+"mm","important");
+  });
+  qrElement.querySelectorAll("svg,img,canvas").forEach(el=>{
+   el.style.setProperty("width",qrSize+"mm","important");
+   el.style.setProperty("height",qrSize+"mm","important");
+   el.style.setProperty("min-width",qrSize+"mm","important");
+   el.style.setProperty("min-height",qrSize+"mm","important");
+   el.style.setProperty("max-width","none","important");
+   el.style.setProperty("max-height","none","important");
+  });
+ }
  let css="";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;}";
  css+="#printArea .qr-bottom{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
@@ -689,7 +708,7 @@ function render(){
   qr.addData(qrContent,"Byte");
   qr.make();
   $('qrcode').innerHTML=qr.createSvgTag({cellSize:4,margin:4,scalable:true});
-  const qrSize=$('printArea').classList.contains("large-label")?40:26;
+  const qrSize=labelDimensions.width>=45&&labelDimensions.height>=85?40:26;
   const qrBox=$('printArea').querySelector(".qr-bottom");
   const qrElement=$('qrcode');
   [qrBox,qrElement].forEach(el=>{
@@ -711,6 +730,17 @@ function render(){
    svg.style.setProperty("display","block","important");
   });
   qrElement.setAttribute("data-qr-size-mm",String(qrSize));
+  qrBox.setAttribute("data-qr-size-mm",String(qrSize));
+  // Pri veľkej etikete nastavíme SVG aj obal priamo podľa jej rozmeru, nezávisle od CSS tried.
+  if(qrSize===40){
+   qrBox.style.cssText+=";width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;flex:0 0 40mm!important;";
+   qrElement.style.cssText+=";width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;flex:0 0 40mm!important;";
+   qrElement.querySelectorAll("svg").forEach(svg=>{
+    svg.style.cssText+=";width:40mm!important;height:40mm!important;min-width:40mm!important;min-height:40mm!important;max-width:none!important;max-height:none!important;display:block!important;";
+    svg.setAttribute("width","40mm");
+    svg.setAttribute("height","40mm");
+   });
+  }
   const qrVersion=(qr.getModuleCount()-17)/4;
   $('qrcode').setAttribute("data-qr-version",String(qrVersion));
   $('qrcode').setAttribute("data-qr-bytes",String(utf8Size(qrContent)));
