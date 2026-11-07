@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.7</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.8</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1473,7 +1473,14 @@ function renderFilingCabinet(){
  });
  $("filingCabinetList").innerHTML=entries.length?entries.map(item=>{
   const serviceRecords=(item.records||[]).slice().reverse();
-  const owner=[item.ownerName,item.ownerNumber].filter(Boolean).join(" · ")||"Majiteľ nie je vyplnený";
+  const ownerFields={
+   machine:[["machine",item.machine],["ownerName",item.ownerName],["ownerNumber",item.ownerNumber]],
+   ownerName:[["ownerName",item.ownerName],["machine",item.machine],["ownerNumber",item.ownerNumber]],
+   ownerNumber:[["ownerNumber",item.ownerNumber],["machine",item.machine],["ownerName",item.ownerName]]
+  }[sortField]||[["machine",item.machine],["ownerName",item.ownerName],["ownerNumber",item.ownerNumber]];
+  const owner=ownerFields.filter(([,value])=>String(value||"").trim()).map(([field,value])=>
+   '<div class="filing-identity-'+field+'">'+escapeHtml(value)+'</div>'
+  ).join("")||'<div>Majiteľ nie je vyplnený</div>';
   const serviceHtml=serviceRecords.length?'<div class="filing-service-list">'+serviceRecords.map((record,index)=>{
    const hasUnit=record.unit==="km"||record.unit==="mh";
    const unit=record.unit==="mh"?"MTH":"KM";
@@ -1486,7 +1493,7 @@ function renderFilingCabinet(){
    const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+formatPrintedCount(printCount)+'</strong></span>';
    return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
-  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
+  return '<div class="filing-record"><div class="filing-identity">'+owner+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  $("filingCabinetList").querySelectorAll("[data-delete-service]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.deleteService;
