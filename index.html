@@ -293,7 +293,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="header-contact-row"><span>Slovany 112</span><span>0944379060</span></div>
 <div class="header-email">serviscentrumnahalka@gmail.com</div>
 </div>
-<div id="labelRows" class="label-rows" aria-label="Text štítku, najviac 15 riadkov"></div>
+<div id="labelRows" class="label-rows" aria-label="Text servisného štítku"></div>
 <div class="label-info" id="labelCurrent" hidden></div>
 <div class="label-info label-next" id="labelNext" hidden></div>
 <div class="qr-bottom"><div id="qrcode" aria-label="QR kód kompletnej servisnej histórie"></div></div>
@@ -707,9 +707,7 @@ function render(){
  labelRows.push({text:"NASLEDUJÚCI SERVIS",kind:"center"});
  labelRows.push({text:"Dátum: "+fmtDate(shown.nextDate),kind:""});
  if(hasUnit&&shown.nextKm) labelRows.push({text:unitText+": "+shown.nextKm,kind:"bold"});
- // Tri riadky firemnej hlavičky + najviac 12 servisných riadkov = spolu 15 riadkov textu.
- const limitedRows=labelRows.slice(0,12);
- limitedRows.forEach(row=>{
+ labelRows.forEach(row=>{
   const el=document.createElement("div");
   el.className="label-row "+(row.kind||"");
   el.textContent=row.text;
