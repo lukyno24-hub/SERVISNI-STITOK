@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.4</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.5</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1802,9 +1802,15 @@ $('machine').addEventListener('input',()=>{
 $('machine').addEventListener('change',()=>{
  const key=ownerMachineKey($('machine').value);
  const match=getMachineDirectoryEntries().find(item=>ownerMachineKey(item.machine)===key);
- $('machineMatchStatus').textContent=match
-  ?"Nájdená zhoda v kartotéke: "+match.machine+". Meno a číslo môžeš upraviť samostatne."
-  :"Nový stroj – bez presnej zhody v kartotéke.";
+ if(match){
+  // Automaticky doplníme iba prázdne polia; ručne zadané meno ani číslo neprepisujeme.
+  if(!$('ownerName').value.trim()&&match.name)$('ownerName').value=match.name;
+  if(!$('ownerNumber').value.trim()&&match.number)$('ownerNumber').value=match.number;
+  $('machineMatchStatus').textContent="Načítaná zhoda v kartotéke: "+match.machine;
+  $('ownerMatchStatus').textContent="Prázdne údaje boli doplnené z kartotéky. Existujúce údaje zostali nezmenené.";
+ }else{
+  $('machineMatchStatus').textContent="Nový stroj – bez presnej zhody v kartotéke.";
+ }
  scheduleFormDraftSave();
 });
 $('filingSearch').addEventListener('input',renderFilingCabinet);
