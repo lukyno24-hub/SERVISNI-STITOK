@@ -31,6 +31,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-cabinet-list{display:grid;gap:8px;margin:10px 0}
 .filing-record-actions{display:flex;gap:8px;margin-top:8px}.filing-record-actions button{flex:1}
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
+.filing-service-list{display:grid;gap:7px;margin-top:8px}
+.filing-service-entry{padding:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:5px}
+.filing-service-entry strong{font-size:13px;margin:0 0 3px}
+.filing-service-entry>div{font-size:13px;overflow-wrap:anywhere}
+.filing-service-entry .small{font-size:11px;color:var(--muted);margin-top:3px}
 .filing-record strong{display:block;margin-bottom:4px}
 .filing-record .small{color:var(--muted);font-size:12px}
 .label-storage{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);text-align:left}
@@ -1129,10 +1134,18 @@ function renderFilingCabinet(){
   return !query||searchable.includes(query);
  }).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
  $("filingCabinetList").innerHTML=entries.length?entries.map(item=>{
-  const latest=(item.records||[]).slice(-1)[0];
+  const serviceRecords=(item.records||[]).slice().reverse();
   const owner=[item.ownerName,item.ownerNumber].filter(Boolean).join(" · ")||"Majiteľ nie je vyplnený";
-  const latestText=latest?("Posledný servis: "+(latest.date?fmtDate(latest.date):"bez dátumu")+" · "+String(latest.description||"").slice(0,100)):"Zatiaľ bez servisného záznamu";
-  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+escapeHtml(latestText)+'</div><div class="small">'+(item.records||[]).length+' servisných záznamov</div><div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať</button></div></div>';
+  const serviceHtml=serviceRecords.length?'<div class="filing-service-list">'+serviceRecords.map((record,index)=>{
+   const hasUnit=record.unit==="km"||record.unit==="mh";
+   const unit=record.unit==="mh"?"MTH":"KM";
+   const current=hasUnit&&record.current?" · Stav: "+escapeHtml(record.current)+" "+unit:"";
+   const next=hasUnit&&record.nextKm?" · Ďalší stav: "+escapeHtml(record.nextKm)+" "+unit:"";
+   const date=record.date?fmtDate(record.date):"Bez dátumu";
+   const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
+   return '<div class="filing-service-entry"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current.slice(0)+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div></div>';
+  }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
+  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  $("filingCabinetList").querySelectorAll("[data-delete-machine]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.deleteMachine;
