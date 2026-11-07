@@ -484,6 +484,7 @@ async function detectOtherPrinterInfo(){
   if(!applyLabelDimensions(width,height)) throw new Error("Načítaný rozmer nie je platný.");
   $('paperSizeStatus').textContent=width+" × "+height+" mm";
   $('printerStatus').textContent="Rozpoznaný rozmer etikety: "+width+" × "+height+" mm";
+  render();
  }catch(e){
   $('paperSizeStatus').textContent="Rozmer sa nepodarilo načítať z RFID: "+(e?.message||String(e));
  }
@@ -688,13 +689,28 @@ function render(){
   qr.addData(qrContent,"Byte");
   qr.make();
   $('qrcode').innerHTML=qr.createSvgTag({cellSize:4,margin:4,scalable:true});
-  const qrSize=labelDimensions.width>=45&&labelDimensions.height>=85?40:26;
-  $('qrcode').querySelectorAll('svg').forEach(svg=>{
+  const qrSize=$('printArea').classList.contains("large-label")?40:26;
+  const qrBox=$('printArea').querySelector(".qr-bottom");
+  const qrElement=$('qrcode');
+  [qrBox,qrElement].forEach(el=>{
+   el.style.setProperty("width",qrSize+"mm","important");
+   el.style.setProperty("height",qrSize+"mm","important");
+   el.style.setProperty("min-width",qrSize+"mm","important");
+   el.style.setProperty("min-height",qrSize+"mm","important");
+   el.style.setProperty("flex","0 0 "+qrSize+"mm","important");
+  });
+  qrElement.querySelectorAll('svg,img,canvas').forEach(svg=>{
    svg.setAttribute("width",qrSize+"mm");
    svg.setAttribute("height",qrSize+"mm");
    svg.style.setProperty("width",qrSize+"mm","important");
    svg.style.setProperty("height",qrSize+"mm","important");
+   svg.style.setProperty("min-width",qrSize+"mm","important");
+   svg.style.setProperty("min-height",qrSize+"mm","important");
+   svg.style.setProperty("max-width","none","important");
+   svg.style.setProperty("max-height","none","important");
+   svg.style.setProperty("display","block","important");
   });
+  qrElement.setAttribute("data-qr-size-mm",String(qrSize));
   const qrVersion=(qr.getModuleCount()-17)/4;
   $('qrcode').setAttribute("data-qr-version",String(qrVersion));
   $('qrcode').setAttribute("data-qr-bytes",String(utf8Size(qrContent)));
