@@ -285,11 +285,12 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel">
 <h2>3. Náhľad a tlač štítku</h2>
 <div class="actions">
-<select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad" onclick="if(viewingInternalService)openPreview()">
+<select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad">
  <option value="preview">👁 Náhľad štítku 30 × 50 mm</option>
  <option value="small">Vybrať malú etiketu 50 × 30 mm</option>
  <option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>
 </select>
+<button id="previewReadOnlyButton" class="preview-launch full" type="button" onclick="openPreview()" hidden>👁 Náhľad štítku</button>
 <button id="clearFormButton" class="light" onclick="clearForm()">Vyčistiť formulár</button>
 </div>
 <div id="appStatus" class="status">Vyber servisné položky a skontroluj ich v náhľade štítku.</div>
@@ -1234,6 +1235,12 @@ function setInternalFormReadOnly(readOnly){
  if(!panel)return;
  // Pri prezeraní uloženého zásahu necháme v ovládaní iba náhľad jeho uloženého formátu.
  const previewSelector=$("previewSizeButton");
+ const previewReadOnlyButton=$("previewReadOnlyButton");
+ if(previewSelector&&previewReadOnlyButton){
+  previewSelector.hidden=readOnly;
+  previewReadOnlyButton.hidden=!readOnly;
+  previewReadOnlyButton.textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+ }
  if(previewSelector&&previewSelector.options.length>=3){
   previewSelector.options[1].hidden=readOnly;
   previewSelector.options[2].hidden=readOnly;
