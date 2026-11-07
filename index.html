@@ -50,6 +50,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .form-read-only input:disabled,.form-read-only select:disabled,.form-read-only textarea:disabled{opacity:1;color:#344054;background:#f1f3f5;cursor:default}
 .form-read-only details[data-read-only] summary{pointer-events:none;cursor:default}
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
+.filing-owner-heading{font-size:14px;font-weight:700;margin:0 0 7px;color:#1f2937}
+.filing-owner-frame{border:1px solid var(--blue);border-radius:8px;padding:9px;background:#fff}
+.filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
+.filing-owner-frame .filing-owner-machine{font-weight:600}
 .filing-service-list{display:grid;gap:7px;margin-top:8px}
 .filing-service-entry{padding:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:5px}
 .filing-service-date{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:7px}
@@ -176,7 +180,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.9</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.3.1</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1495,7 +1499,11 @@ function renderFilingCabinet(){
    const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+formatPrintedCount(printCount)+'</strong></span>';
    return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div class="filing-service-body"><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
-  return '<div class="filing-record"><div class="filing-identity">'+owner+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
+  const machineActionButtons='<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div>';
+  if(sortField==="ownerName"){
+   return '<div class="filing-record"><div class="filing-owner-heading">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div><div class="filing-owner-frame"><div class="filing-owner-machine">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+machineActionButtons+'</div></div>';
+  }
+  return '<div class="filing-record"><div class="filing-identity">'+owner+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+machineActionButtons+'</div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  $("filingCabinetList").querySelectorAll("[data-delete-service]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.deleteService;
