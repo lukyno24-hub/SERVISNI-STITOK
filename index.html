@@ -11,6 +11,7 @@
 :root{--green:#198754;--blue:#0d6efd;--ink:#1f2937;--muted:#667085;--line:#e5e7eb}
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f3f5f8;color:var(--ink);margin:0;padding:18px}
 main{max-width:720px;margin:auto}h1{text-align:center;color:var(--green);margin:8px 0 4px;font-size:25px}
+.version-number{text-align:center;color:var(--muted);font-size:12px;line-height:1;margin:-1px 0 14px;font-weight:600}
 .sub{text-align:center;color:var(--muted);margin-bottom:20px}
 .panel{background:white;border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #00000008}
 h2{font-size:18px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -129,7 +130,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.0</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">Tlačiareň nie je pripojená.</div>
