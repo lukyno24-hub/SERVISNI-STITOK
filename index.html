@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.0</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.1</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1634,9 +1634,13 @@ function setViewedServicePrintCount(value){
 }
 function cycleViewedServicePrintCount(){
  if(!viewingInternalServiceRef)return;
- const control=$("previewPrintCountInput");
- const current=Math.max(0,Number(control?.dataset.count)||0);
- const next=current===0?1:current===1?2:0;
+ const {key,index}=viewingInternalServiceRef;
+ const item=readInternalRecords()[key];
+ const record=item&&item.records&&item.records[index];
+ if(!record)return;
+ const hasPhysicalPrint=Number(record.physicalPrintCount)>0;
+ const current=Math.max(0,Number(record.printCount)||(record.printed===true?1:0));
+ const next=hasPhysicalPrint?(current===0?1:current===1?2:0):(current===0?1:0);
  setViewedServicePrintCount(next);
 }
 function markViewedServiceAsPrinted(){
@@ -1648,6 +1652,7 @@ function markViewedServiceAsPrinted(){
  const record=item.records[index];
  const previousCount=Number(record.printCount)||(record.printed===true?1:0);
  record.printCount=previousCount+1;
+ record.physicalPrintCount=(Number(record.physicalPrintCount)||0)+1;
  record.printed=record.printCount>0;
  record.printedAt=new Date().toISOString();
  item.updatedAt=new Date().toISOString();
