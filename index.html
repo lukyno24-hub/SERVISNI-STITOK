@@ -564,7 +564,7 @@ async function detectOtherPrinterInfo(){
   if(width<10||width>100||height<10||height>200) throw new Error("Neplatné rozmery "+width+" × "+height+" mm.");
   if(!applyLabelDimensions(width,height)) throw new Error("RFID rozmer "+width+" × "+height+" mm sa nezhoduje s profilom 50 × 30 ani 50 × 90 mm.");
   $('paperSizeStatus').textContent=width+" × "+height+" mm · profil: "+activeLabelProfile.name;
-  $('printerStatus').textContent="Pripojená: "+(printerDevice.name||"Niimbot M2")+" · aktívny profil: "+activeLabelProfile.name+" ("+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm)";
+  $('printerStatus').textContent="Pripojená: "+(printerDevice.name||"Niimbot M2")+" · rozmer štítku: "+width+" × "+height+" mm";
   render();
  }catch(e){
   $('paperSizeStatus').textContent="Rozmer sa nepodarilo načítať z RFID: "+(e?.message||String(e));
