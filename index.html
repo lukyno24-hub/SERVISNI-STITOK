@@ -1121,6 +1121,50 @@ function closeFilingCabinet(){
  $("filingCabinet").hidden=true;
 }
 function changeLabelFolder(){chooseLabelFolder();}
+function openInternalServiceRecord(key,index){
+ const item=readInternalRecords()[key];
+ if(!item||!item.records?.[index])return;
+ const selected=item.records[index];
+ $("machine").value=item.machine||"";
+ $("ownerName").value=item.ownerName||"";
+ $("ownerNumber").value=item.ownerNumber||"";
+ records=item.records.filter((record,i)=>i!==index);
+ $("date").value=selected.date||today();
+ $("current").value=selected.current||"";
+ document.querySelectorAll('input[name="unit"]').forEach(el=>{el.checked=el.value===selected.unit;el.dataset.wasSelected=el.checked?"true":"false";});
+ document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
+ $("extraNote").value="";
+ String(selected.description||"").split(" | ").forEach(part=>{
+  const pos=part.indexOf(":"); if(pos<0)return;
+  const group=part.slice(0,pos).trim(),valueText=part.slice(pos+1).trim();
+  if(group==="Poznámka"){$("extraNote").value=valueText;return;}
+  valueText.split(/,\s*/).map(v=>v.trim()).filter(Boolean).forEach(value=>{
+   const checkbox=[...document.querySelectorAll('input[name="servicePart"]')].find(el=>el.dataset.group===group&&el.value===value);
+   if(checkbox){checkbox.checked=true;const details=checkbox.closest("details");if(details)details.open=true;}
+  });
+ });
+ document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
+ if(selected.nextDate&&selected.date){
+  const from=new Date(selected.date+"T12:00:00"),to=new Date(selected.nextDate+"T12:00:00");
+  const months=(to.getFullYear()-from.getFullYear())*12+(to.getMonth()-from.getMonth());
+  const period=document.querySelector('input[name="nextPeriod"][value="'+months+'"]');
+  if(period)period.checked=true;
+ }
+ updateUnitLabels();
+ updateKmIntervalOptions();
+ if(selected.unit==="km"&&selected.current&&selected.nextKm){
+  const interval=Number(String(selected.nextKm).replace(/\s/g,""))-Number(String(selected.current).replace(/\s/g,""));
+  document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.checked=false);
+  const option=document.querySelector('input[name="kmInterval"][value="'+interval+'"]');
+  if(option)option.checked=true;
+  updateKmIntervalOptions();
+  $("nextKm").value=selected.nextKm;
+ }
+ $("nextKmManual").value=selected.unit==="mh"?(selected.nextKm||""):"";
+ updateNextDate();
+ render();renderHistory();closeFilingCabinet();
+ $("appStatus").textContent="Otvorený servisný zásah na úpravu: "+(item.machine||"")+" · "+(selected.date?fmtDate(selected.date):"bez dátumu")+". Pri uložení sa zachová ostatná história.";
+}
 function renderFilingCabinet(){
  const directory=readInternalRecords();
  const owners=readOwnerDirectory();
@@ -1143,28 +1187,36 @@ function renderFilingCabinet(){
    const next=hasUnit&&record.nextKm?" · Ďalší stav: "+escapeHtml(record.nextKm)+" "+unit:"";
    const date=record.date?fmtDate(record.date):"Bez dátumu";
    const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
-   return '<div class="filing-service-entry"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current.slice(0)+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div></div>';
+   const originalIndex=(item.records||[]).length-1-index;
+   return '<div class="filing-service-entry"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
-  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať</button></div></div>';
+  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
- $("filingCabinetList").querySelectorAll("[data-delete-machine]").forEach(button=>button.addEventListener("click",()=>{
-  const key=button.dataset.deleteMachine;
-  const item=readInternalRecords()[key];
-  if(!item)return;
-  const name=item.machine||"Neoznačený stroj";
-  if(!confirm("Naozaj chceš vymazať interný záznam stroja „"+name+"“ vrátane majiteľa a servisnej histórie? Túto akciu nemožno vrátiť späť."))return;
+ $("filingCabinetList").querySelectorAll("[data-delete-service]").forEach(button=>button.addEventListener("click",()=>{
+  const key=button.dataset.deleteService;
+  const index=Number(button.dataset.serviceIndex);
   const directory=readInternalRecords();
-  delete directory[key];
+  const item=directory[key];
+  if(!item||!Number.isInteger(index)||index<0||index>=(item.records||[]).length)return;
+  const record=item.records[index];
+  const title=(item.machine||"Stroj")+" · "+(record.date?fmtDate(record.date):"servisný zásah");
+  if(!confirm("Naozaj chceš vymazať iba tento servisný zásah?\n"+title+"\nOstatné zásahy a údaje majiteľa zostanú zachované."))return;
+  item.records.splice(index,1);
+  item.updatedAt=new Date().toISOString();
+  directory[key]=item;
   localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
-  const owners=readOwnerDirectory();
-  delete owners[key];
-  localStorage.setItem(OWNER_STORAGE_KEY,JSON.stringify(owners));
-  if(ownerMachineKey($("machine").value)===key){
-   $("ownerName").value="";
-   $("ownerNumber").value="";
-  }
+  if(ownerMachineKey($("machine").value)===key)records=Array.isArray(item.records)?item.records:[];
   renderFilingCabinet();
+  renderHistory();
  }));
+ $("filingCabinetList").querySelectorAll("[data-open-service]").forEach(button=>button.addEventListener("click",()=>{
+  const key=button.dataset.openService;
+  const index=Number(button.dataset.serviceIndex);
+  const item=readInternalRecords()[key];
+  if(!item||!Number.isInteger(index)||!item.records?.[index])return;
+  openInternalServiceRecord(key,index);
+ }));
+
  $("filingCabinetList").querySelectorAll("[data-open-machine]").forEach(button=>button.addEventListener("click",()=>{
   const item=readInternalRecords()[button.dataset.openMachine];
   if(!item)return;
