@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.5</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.6</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1803,11 +1803,13 @@ $('machine').addEventListener('change',()=>{
  const key=ownerMachineKey($('machine').value);
  const match=getMachineDirectoryEntries().find(item=>ownerMachineKey(item.machine)===key);
  if(match){
-  // Automaticky doplníme iba prázdne polia; ručne zadané meno ani číslo neprepisujeme.
-  if(!$('ownerName').value.trim()&&match.name)$('ownerName').value=match.name;
-  if(!$('ownerNumber').value.trim()&&match.number)$('ownerNumber').value=match.number;
+  // Po výbere konkrétneho stroja načítame celý priradený profil.
+  $('machine').value=match.machine;
+  $('ownerName').value=match.name;
+  $('ownerNumber').value=match.number;
+  autoFilledMachineKey=match.key;
   $('machineMatchStatus').textContent="Načítaná zhoda v kartotéke: "+match.machine;
-  $('ownerMatchStatus').textContent="Prázdne údaje boli doplnené z kartotéky. Existujúce údaje zostali nezmenené.";
+  $('ownerMatchStatus').textContent="Načítané meno a číslo priradené k tomuto stroju.";
  }else{
   $('machineMatchStatus').textContent="Nový stroj – bez presnej zhody v kartotéke.";
  }
@@ -1816,8 +1818,14 @@ $('machine').addEventListener('change',()=>{
 $('filingSearch').addEventListener('input',renderFilingCabinet);
 $('ownerName').addEventListener('input',()=>updateOwnerAutocomplete("name"));
 $('ownerNumber').addEventListener('input',()=>updateOwnerAutocomplete("number"));
-$('ownerName').addEventListener('change',saveOwnerForMachine);
-$('ownerNumber').addEventListener('change',saveOwnerForMachine);
+$('ownerName').addEventListener('change',()=>{
+ if(selectOwnerAutocompleteMatch("name"))return;
+ saveOwnerForMachine();
+});
+$('ownerNumber').addEventListener('change',()=>{
+ if(selectOwnerAutocompleteMatch("number"))return;
+ saveOwnerForMachine();
+});
 $('ownerName').addEventListener('blur',saveOwnerForMachine);
 $('ownerNumber').addEventListener('blur',saveOwnerForMachine);
 document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
