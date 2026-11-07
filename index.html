@@ -52,6 +52,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
 .filing-service-list{display:grid;gap:7px;margin-top:8px}
 .filing-service-entry{padding:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:5px}
+.filing-service-date{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.filing-service-printed{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#344054;margin:0}
+.filing-service-printed input{width:13px;height:13px;margin:0;accent-color:var(--green);padding:0}
 .filing-service-entry strong{font-size:13px;margin:0 0 3px}
 .filing-service-entry>div{font-size:13px;overflow-wrap:anywhere}
 .filing-service-entry .small{font-size:11px;color:var(--muted);margin-top:3px}
@@ -166,7 +169,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.3</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.4</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1236,7 +1239,12 @@ function saveInternalMachineRecord(extraRecord=null){
   }else{
    const matchIndex=internalRecords.findIndex(saved=>signature(saved)===signature(extraRecord));
    if(matchIndex<0)internalRecords.push(extraRecord);
-   else internalRecords[matchIndex]={...internalRecords[matchIndex],labelProfile:extraRecord.labelProfile||activeLabelProfile.id};
+   else internalRecords[matchIndex]={
+    ...internalRecords[matchIndex],
+    ...extraRecord,
+    labelProfile:extraRecord.labelProfile||internalRecords[matchIndex].labelProfile||activeLabelProfile.id,
+    printed:internalRecords[matchIndex].printed===true||extraRecord.printed===true
+   };
   }
  }
  const ownerName=$("ownerName").value.trim();
@@ -1275,6 +1283,7 @@ function closeFilingCabinet(){
 }
 function changeLabelFolder(){chooseLabelFolder();}
 let viewingInternalService=false;
+let viewingInternalServiceRef=null;
 function setInternalFormReadOnly(readOnly){
  const panel=$("serviceFormPanel");
  if(!panel)return;
@@ -1314,12 +1323,14 @@ function setInternalFormReadOnly(readOnly){
 }
 function returnToFilingCabinet(){
  setInternalFormReadOnly(false);
+ viewingInternalServiceRef=null;
  openFilingCabinet();
 }
 function openInternalServiceRecord(key,index){
  const item=readInternalRecords()[key];
  if(!item||!item.records?.[index])return;
  const selected=item.records[index];
+ viewingInternalServiceRef={key,index};
  editingInternalService=null;
  const savedProfile=Object.values(LABEL_PROFILES).find(profile=>profile.id===selected.labelProfile);
  if(savedProfile)applyLabelDimensions(savedProfile.width,savedProfile.height);
@@ -1394,7 +1405,8 @@ function renderFilingCabinet(){
    const date=record.date?fmtDate(record.date):"Bez dátumu";
    const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
    const originalIndex=(item.records||[]).length-1-index;
-   return '<div class="filing-service-entry"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
+   const printedStatus=record.printed===true?'<label class="filing-service-printed">Vytlačené <input type="checkbox" disabled checked></label>':'<label class="filing-service-printed">Vytlačené <input type="checkbox" disabled></label>';
+   return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
   return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
@@ -1552,7 +1564,9 @@ function printAndSaveLabel(){
    description,
    nextDate:$("nextDate").value,
    nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():"",
-   labelProfile:activeLabelProfile.id
+   labelProfile:activeLabelProfile.id,
+   printed:true,
+   printedAt:new Date().toISOString()
   };
   saveInternalMachineRecord(draft);
  }else{
@@ -1573,8 +1587,21 @@ function updatePreviewActionMode(){
  printButton.textContent=viewingInternalService?"🖨️ Tlačiť":"🖨️ Uložiť a tlačiť štítok";
  if(saveCopyStatus)saveCopyStatus.hidden=!!viewingInternalService;
 }
+function markViewedServiceAsPrinted(){
+ if(!viewingInternalServiceRef)return;
+ const {key,index}=viewingInternalServiceRef;
+ const directory=readInternalRecords();
+ const item=directory[key];
+ if(!item||!Array.isArray(item.records)||!item.records[index])return;
+ item.records[index].printed=true;
+ item.records[index].printedAt=new Date().toISOString();
+ item.updatedAt=new Date().toISOString();
+ directory[key]=item;
+ localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
+}
 function handlePreviewPrint(){
  if(viewingInternalService){
+  markViewedServiceAsPrinted();
   window.print();
   return;
  }
