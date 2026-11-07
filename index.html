@@ -1098,27 +1098,19 @@ function selectOwnerAutocompleteMatch(field){
  return true;
 }
 function saveOwnerForMachine(){
- const key=ownerMachineKey($("machine").value);
- if(!key)return;
- const directory=readOwnerDirectory();
- const name=$("ownerName").value.trim();
- const number=$("ownerNumber").value.trim();
- if(!name&&!number) delete directory[key];
- else directory[key]={name,number,updatedAt:new Date().toISOString()};
- try{localStorage.setItem(OWNER_STORAGE_KEY,JSON.stringify(directory));}
- catch(e){$("appStatus").textContent="Interné údaje majiteľa sa nepodarilo uložiť v tomto zariadení.";}
- saveInternalMachineRecord();
+ // Meno a číslo zostávajú iba v rozpracovanom formulári až do potvrdenia uloženia.
+ scheduleFormDraftSave();
 }
 function loadQR(raw){
  const obj=parsePayload(raw);
  if(obj.machine)$('machine').value=obj.machine;
+ // QR sa načíta iba do formulára; kartotéka sa zmení až po kliknutí na uloženie.
  loadOwnerForMachine();
  updateMachineAutocomplete();
  records=Array.isArray(obj.records)?obj.records:[];
- saveInternalMachineRecord();
  render();
- $('scanStatus').textContent=`Načítané z QR kódu: ${obj.machine||"stroj"} • ${records.length} servisných záznamov. Otváram príslušný záznam v kartotéke.`;
- openFilingCabinet();
+ scheduleFormDraftSave();
+ $('scanStatus').textContent=`Načítané z QR kódu: ${obj.machine||"stroj"} • ${records.length} servisných záznamov. Údaje sú rozpracované; do kartotéky sa uložia až po potvrdení.`;
 }
 async function startScan(){
  if(!window.Html5Qrcode){alert("QR skener sa nenačítal. Skontroluj internet a otvor aplikáciu cez HTTPS.");return}
@@ -1134,6 +1126,7 @@ async function stopScan(){if(activeScanner){try{await activeScanner.stop();activ
 
 function clearForm(){
  if(viewingInternalService){returnToFilingCabinet();return;}
+ clearFormDraft();
  // Vyčistiť všetky vstupné polia aktuálneho formulára; uložená kartotéka sa nemení.
  $('machine').value="";
  $('ownerName').value="";
@@ -1264,6 +1257,82 @@ function saveInternalMachineRecord(extraRecord=null){
   $("saveCopyStatus").textContent="Interný záznam sa nepodarilo uložiť do kartotéky. Skontroluj voľné miesto v zariadení.";
   return false;
  }
+}
+const FORM_DRAFT_KEY="servisnyAsistentFormDraft_v1";
+let formDraftTimer=null;
+function collectFormDraft(){
+ return {
+  version:1,
+  savedAt:new Date().toISOString(),
+  machine:$("machine").value,
+  ownerName:$("ownerName").value,
+  ownerNumber:$("ownerNumber").value,
+  date:$("date").value,
+  unit:document.querySelector('input[name="unit"]:checked')?.value||"",
+  current:$("current").value,
+  serviceParts:[...document.querySelectorAll('input[name="servicePart"]:checked')].map(el=>({group:el.dataset.group||"",value:el.value})),
+  fluidType:$("fluidType").value,
+  extraNote:$("extraNote").value,
+  nextPeriods:[...document.querySelectorAll('input[name="nextPeriod"]:checked')].map(el=>el.value),
+  kmIntervals:[...document.querySelectorAll('input[name="kmInterval"]:checked')].map(el=>el.value),
+  nextKmManual:$("nextKmManual").value,
+  records:Array.isArray(records)?records:[],
+  labelProfile:activeLabelProfile.id
+ };
+}
+function saveFormDraft(){
+ if(viewingInternalService)return;
+ try{
+  localStorage.setItem(FORM_DRAFT_KEY,JSON.stringify(collectFormDraft()));
+ }catch(error){
+  $("appStatus").textContent="Rozpracované údaje sa nepodarilo uložiť do dočasnej pamäte.";
+ }
+}
+function scheduleFormDraftSave(){
+ if(viewingInternalService)return;
+ if(formDraftTimer)clearTimeout(formDraftTimer);
+ formDraftTimer=setTimeout(()=>{
+  formDraftTimer=null;
+  saveFormDraft();
+ },800);
+}
+function clearFormDraft(){
+ if(formDraftTimer){clearTimeout(formDraftTimer);formDraftTimer=null;}
+ try{localStorage.removeItem(FORM_DRAFT_KEY);}catch(error){}
+}
+function restoreFormDraft(){
+ let draft=null;
+ try{draft=JSON.parse(localStorage.getItem(FORM_DRAFT_KEY)||"null");}catch(error){}
+ if(!draft||draft.version!==1)return false;
+ $("machine").value=draft.machine||"";
+ $("ownerName").value=draft.ownerName||"";
+ $("ownerNumber").value=draft.ownerNumber||"";
+ $("date").value=draft.date||today();
+ $("current").value=draft.current||"";
+ $("fluidType").value=draft.fluidType||"DOT 4";
+ $("extraNote").value=draft.extraNote||"";
+ $("nextKmManual").value=draft.nextKmManual||"";
+ records=Array.isArray(draft.records)?draft.records:[];
+ document.querySelectorAll('input[name="unit"]').forEach(el=>{
+  el.checked=el.value===(draft.unit||"");
+  el.dataset.wasSelected=el.checked?"true":"false";
+ });
+ document.querySelectorAll('input[name="servicePart"]').forEach(el=>{
+  el.checked=(draft.serviceParts||[]).some(item=>item.group===el.dataset.group&&item.value===el.value);
+ });
+ document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>{el.checked=(draft.nextPeriods||[]).includes(el.value);});
+ document.querySelectorAll('input[name="kmInterval"]').forEach(el=>{el.checked=(draft.kmIntervals||[]).includes(el.value);});
+ if(draft.labelProfile){
+  const profile=Object.values(LABEL_PROFILES).find(item=>item.id===draft.labelProfile);
+  if(profile)applyLabelDimensions(profile.width,profile.height);
+ }
+ updateUnitLabels();
+ updateKmIntervalOptions();
+ updateNextDate();
+ if(draft.unit==="mh")$("nextKmManual").value=draft.nextKmManual||"";
+ updateMachineAutocomplete();
+ render();
+ return true;
 }
 function folderButtonAction(){
  if(labelFolderHandle){openFilingCabinet();return;}
@@ -1541,6 +1610,7 @@ async function saveLabelCopy(){
   };
  }
  if(!saveInternalMachineRecord(draft))return;
+ clearFormDraft();
  $("saveCopyStatus").textContent="Interný záznam bol priradený k stroju a majiteľovi. Vytváram PNG štítku…";
  const blob=await createLabelPngBlob();
  const fileName=makeLabelFileName();
@@ -1564,10 +1634,11 @@ function printAndSaveLabel(){
    printed:true,
    printedAt:new Date().toISOString()
   };
-  saveInternalMachineRecord(draft);
+  if(!saveInternalMachineRecord(draft))return;
  }else{
-  saveInternalMachineRecord();
+  if(!saveInternalMachineRecord())return;
  }
+ clearFormDraft();
  // Tlač sa spustí priamo v kliknutí používateľa; kópia sa uloží po zavretí tlačového dialógu.
  window.print();
  saveLabelCopy().catch(error=>{
@@ -1731,24 +1802,18 @@ $('machine').addEventListener('input',()=>{
 $('machine').addEventListener('change',()=>{
  const key=ownerMachineKey($('machine').value);
  const match=getMachineDirectoryEntries().find(item=>ownerMachineKey(item.machine)===key);
- if(match){
-  $('machine').value=match.machine;
-  $('ownerName').value=match.name;
-  $('ownerNumber').value=match.number;
-  autoFilledMachineKey=match.key;
-  $('machineMatchStatus').textContent="Načítané z kartotéky: "+match.machine;
- }else{
-  $('machineMatchStatus').textContent="Nový stroj – bez presnej zhody v kartotéke.";
- }
- saveInternalMachineRecord();
+ $('machineMatchStatus').textContent=match
+  ?"Nájdená zhoda v kartotéke: "+match.machine+". Meno a číslo môžeš upraviť samostatne."
+  :"Nový stroj – bez presnej zhody v kartotéke.";
+ scheduleFormDraftSave();
 });
 $('filingSearch').addEventListener('input',renderFilingCabinet);
 $('ownerName').addEventListener('input',()=>updateOwnerAutocomplete("name"));
 $('ownerNumber').addEventListener('input',()=>updateOwnerAutocomplete("number"));
-$('ownerName').addEventListener('change',()=>{selectOwnerAutocompleteMatch("name");saveOwnerForMachine();saveInternalMachineRecord()});
-$('ownerNumber').addEventListener('change',()=>{selectOwnerAutocompleteMatch("number");saveOwnerForMachine();saveInternalMachineRecord()});
-$('ownerName').addEventListener('blur',()=>{saveOwnerForMachine();saveInternalMachineRecord()});
-$('ownerNumber').addEventListener('blur',()=>{saveOwnerForMachine();saveInternalMachineRecord()});
+$('ownerName').addEventListener('change',saveOwnerForMachine);
+$('ownerNumber').addEventListener('change',saveOwnerForMachine);
+$('ownerName').addEventListener('blur',saveOwnerForMachine);
+$('ownerNumber').addEventListener('blur',saveOwnerForMachine);
 document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
 $('date').addEventListener('input',()=>{updateNextDate();render()});
 $('date').addEventListener('change',()=>{updateNextDate();render()});
@@ -1762,7 +1827,13 @@ applyLabelDimensions(labelDimensions.width,labelDimensions.height);
 $('previewSizeButton').options[0].textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
 $('previewSizeButton').value="preview";
 $('previewSizeButton').addEventListener('change',event=>setManualLabelSize(event.target.value));
+document.querySelectorAll("#serviceFormPanel input,#serviceFormPanel select,#serviceFormPanel textarea").forEach(el=>{
+ el.addEventListener("input",scheduleFormDraftSave);
+ el.addEventListener("change",scheduleFormDraftSave);
+});
 updateUnitLabels();
+if(restoreFormDraft())$("appStatus").textContent="Obnovený rozpracovaný formulár z dočasnej pamäte. Zatiaľ nie je uložený v kartotéke.";
+else render();
 restoreLabelFolder();
 </script>
 </body>
