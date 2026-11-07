@@ -108,7 +108,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 #qrcode img,#qrcode canvas,#qrcode svg{width:26mm!important;height:26mm!important;max-width:none!important;max-height:none!important;display:block}
 .preview-launch{background:#6f42c1;color:white}
 #previewSizeButton{display:block;width:100%;min-height:46px;padding:12px 38px 12px 14px;border:0;border-radius:8px;background:#6f42c1;color:#fff;font-family:inherit;font-size:17px;font-weight:700;line-height:1.25;text-align:center;text-align-last:center;cursor:pointer;}
-#previewSizeButton.preview-read-only{appearance:none;-webkit-appearance:none;background-image:none!important;padding-right:14px;cursor:pointer;}
+
 #previewModal{display:none;position:fixed;inset:0;z-index:1000;background:#0009;padding:16px;overflow:auto;align-items:center;justify-content:center}
 #previewModal.open{display:flex}
 .preview-dialog{width:min(100%,440px);max-height:calc(100vh - 32px);overflow:auto;background:white;border-radius:14px;padding:16px;box-shadow:0 12px 40px #0005}
@@ -286,9 +286,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel">
 <h2>3. Náhľad a tlač štítku</h2>
 <div class="actions">
-<select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad"
- onpointerdown="if(viewingInternalService){event.preventDefault();openPreview()}"
- onclick="if(viewingInternalService){event.preventDefault();openPreview()}">
+<select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad">
  <option value="preview">👁 Náhľad štítku 30 × 50 mm</option>
  <option value="small">Vybrať malú etiketu 50 × 30 mm</option>
  <option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>
@@ -388,8 +386,13 @@ function applyLabelDimensions(width,height){
  $("previewHeading").textContent="Náhľad štítku "+labelText;
  const previewSizeButton=$("previewSizeButton");
  if(previewSizeButton){
-  previewSizeButton.options[0].textContent="👁 Náhľad štítku "+labelText;
-  previewSizeButton.value="preview";
+  const title="👁 Náhľad štítku "+labelText;
+  if(previewSizeButton.tagName==="SELECT"){
+   previewSizeButton.options[0].textContent=title;
+   previewSizeButton.value="preview";
+  }else{
+   previewSizeButton.textContent=title;
+  }
  }
  const qrSize=profile.qr;
  let css="";
@@ -498,8 +501,13 @@ function setPrinterState(connected,message){
  const previewSizeButton=$('previewSizeButton');
  if(previewSizeButton){
   previewSizeButton.disabled=false;
-  previewSizeButton.options[0].textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
-  previewSizeButton.value="preview";
+  const title="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+  if(previewSizeButton.tagName==="SELECT"){
+   previewSizeButton.options[0].textContent=title;
+   previewSizeButton.value="preview";
+  }else{
+   previewSizeButton.textContent=title;
+  }
   previewSizeButton.title=connected?"Rozmer sa nastavuje automaticky podľa RFID; otvorí sa náhľad aktívneho profilu.":"Vyber rozmer a otvor náhľad štítku.";
  }
  const button=$('printerButton');
@@ -1235,16 +1243,25 @@ let viewingInternalService=false;
 function setInternalFormReadOnly(readOnly){
  const panel=$("serviceFormPanel");
  if(!panel)return;
- // Pri prezeraní uloženého zásahu necháme v ovládaní iba náhľad jeho uloženého formátu.
- const previewSelector=$("previewSizeButton");
- if(previewSelector){
-  previewSelector.classList.toggle("preview-read-only",readOnly);
-  previewSelector.title=readOnly?"Kliknutím otvoríš náhľad uloženého rozmeru etikety.":"Vyber rozmer štítku alebo otvor náhľad.";
- }
- if(previewSelector&&previewSelector.options.length>=3){
-  previewSelector.options[1].hidden=readOnly;
-  previewSelector.options[2].hidden=readOnly;
-  previewSelector.value="preview";
+ let previewSelector=$("previewSizeButton");
+ if(readOnly&&previewSelector&&previewSelector.tagName==="SELECT"){
+  const previewButton=document.createElement("button");
+  previewButton.type="button";
+  previewButton.id="previewSizeButton";
+  previewButton.className=previewSelector.className;
+  previewButton.title="Zobraziť náhľad uloženého rozmeru etikety";
+  previewButton.textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+  previewButton.addEventListener("click",openPreview);
+  previewSelector.replaceWith(previewButton);
+ }else if(!readOnly&&previewSelector&&previewSelector.tagName==="BUTTON"){
+  const previewSelect=document.createElement("select");
+  previewSelect.id="previewSizeButton";
+  previewSelect.className=previewSelector.className;
+  previewSelect.setAttribute("aria-label","Vyber rozmer štítku a otvor náhľad");
+  previewSelect.innerHTML='<option value="preview">👁 Náhľad štítku '+activeLabelProfile.width+' × '+activeLabelProfile.height+' mm</option><option value="small">Vybrať malú etiketu 50 × 30 mm</option><option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>';
+  previewSelect.value="preview";
+  previewSelect.addEventListener("change",event=>setManualLabelSize(event.target.value));
+  previewSelector.replaceWith(previewSelect);
  }
  panel.querySelectorAll("input,select,textarea,button").forEach(el=>{
   if(el.id==="clearFormButton"||el.id==="previewSizeButton")return;
