@@ -160,10 +160,12 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
  <div id="printerConnectionStatus">Tlačiareň nie je pripojená.</div>
- <div id="paperSizeStatus">Rozmer štítku: —</div>
- <div class="printer-usage">
-  · Štítky – spotrebované / celkom <strong id="labelUsage">— / —</strong>
-  · Páska – spotrebované / celkom <strong id="ribbonUsage">— / —</strong>
+ <div id="printerMediaInfo" hidden>
+  <div id="paperSizeStatus">Rozmer štítku: —</div>
+  <div class="printer-usage">
+   · Štítky – spotrebované / celkom <strong id="labelUsage">— / —</strong>
+   · Páska – spotrebované / celkom <strong id="ribbonUsage">— / —</strong>
+  </div>
  </div>
  <span id="labelRemaining" hidden></span><span id="ribbonRemaining" hidden></span>
 </div>
@@ -513,6 +515,7 @@ function setPrinterState(connected,message){
  $('printerConnectionStatus').textContent=message||(connected?"Tlačiareň Niimbot M2 je pripojená.":"Tlačiareň nie je pripojená.");
  if(!connected){
   printerProtocolVersion=null;
+  $('printerMediaInfo').hidden=true;
   $('paperSizeStatus').textContent="Tlačiareň nie je pripojená.";
   $('labelUsage').textContent="— / —";
   $('labelRemaining').textContent="—";
@@ -637,6 +640,7 @@ async function detectOtherPrinterInfo(){
   if(width<10||width>100||height<10||height>200) throw new Error("Neplatné rozmery "+width+" × "+height+" mm.");
   if(!applyLabelDimensions(width,height)) throw new Error("RFID rozmer "+width+" × "+height+" mm sa nezhoduje s profilom 50 × 30 ani 50 × 90 mm.");
   $('paperSizeStatus').textContent="Rozmer štítku: "+activeLabelProfile.name;
+  $('printerMediaInfo').hidden=false;
   $('printerConnectionStatus').textContent="Pripojená: "+(printerDevice.name||"Niimbot M2");
   render();
  }catch(e){
