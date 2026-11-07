@@ -345,6 +345,23 @@ function applyLabelDimensions(width,height){
  if(isLarge){
   css+="#printArea.large-label{width:50mm;height:90mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:3mm;background:white;color:#111;overflow:hidden}\n#printArea.large-label .label-header{text-align:center;font-size:8.8pt;line-height:1.3;margin:0 0 1.1mm;overflow-wrap:anywhere}.header-email{display:block;width:100%;font-size:6.6pt;line-height:1.05;white-space:nowrap;letter-spacing:-0.3pt;overflow:hidden;text-align:center}.header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:7.8pt;line-height:1.2}.label-preview h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:8pt;line-height:1.05;letter-spacing:-0.2pt}\n#printArea.large-label .label-info{font-size:8.5pt;line-height:1.3;overflow-wrap:anywhere}\n#printArea.large-label .service-section-title{display:block;text-align:center;font-weight:bold}\n#printArea.large-label .label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:1.5mm;white-space:nowrap;width:100%;font-size:8.2pt;line-height:1.3}\n#printArea.large-label .label-meta-row .meta-value{text-align:right;font-weight:bold;flex:0 1 auto;min-width:0;letter-spacing:-0.1px}\n#printArea.large-label .label-meta-row .meta-date{flex:0 0 auto}\n#printArea.large-label .label-next{margin-top:1.5mm}\n#printArea.large-label .service-print-group{margin-top:1mm}\n#printArea.large-label .service-print-title{font-weight:bold;font-size:8.5pt;line-height:1.25;margin-bottom:0.6mm;text-align:center}\n#printArea.large-label .service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:2mm;row-gap:0.5mm}\n#printArea.large-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:1mm;font-size:7.8pt;line-height:1.25;min-width:0}\n#printArea.large-label .service-print-item .service-print-name{overflow-wrap:anywhere;min-width:0}\n#printArea.large-label .service-check{width:3mm;height:3mm;min-width:3mm;border:0.3mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:6.5pt;font-weight:bold;line-height:1}\n#printArea.large-label .service-print-note{font-size:7pt;line-height:1.2;margin-top:1mm}";
  }
+ if(isSmall){
+  css+="#printArea.small-label{width:30mm;height:50mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:1mm;background:white;color:#111;overflow:hidden}";
+  css+="#printArea.small-label .label-header{text-align:center;font-size:5.2pt;line-height:0.9;margin:0 0 0.4mm;overflow-wrap:anywhere;flex:0 0 auto}";
+  css+="#printArea.small-label h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0;text-align:center;font-size:5.8pt;line-height:0.9;letter-spacing:-0.15pt}";
+  css+="#printArea.small-label .header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:4.8pt;line-height:0.85}";
+  css+="#printArea.small-label .header-email{font-size:3.7pt;line-height:0.85;white-space:nowrap;letter-spacing:-0.28pt;overflow:hidden;text-align:center;width:100%}";
+  css+="#printArea.small-label .label-info{font-size:5.4pt;line-height:0.9;overflow-wrap:anywhere;min-height:0}";
+  css+="#printArea.small-label .service-section-title{display:block;text-align:center;font-weight:bold;font-size:5.6pt;line-height:0.9}";
+  css+="#printArea.small-label .label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:0.5mm;white-space:nowrap;width:100%;font-size:5.2pt;line-height:0.9}";
+  css+="#printArea.small-label .label-next{margin-top:0.4mm}";
+  css+="#printArea.small-label .service-print-group{margin-top:0.25mm}";
+  css+="#printArea.small-label .service-print-title{font-weight:bold;font-size:5.3pt;line-height:0.9;margin-bottom:0.1mm;text-align:center}";
+  css+="#printArea.small-label .service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:0.7mm;row-gap:0}";
+  css+="#printArea.small-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:0.4mm;font-size:4.9pt;line-height:0.88;min-width:0}";
+  css+="#printArea.small-label .service-check{width:1.7mm;height:1.7mm;min-width:1.7mm;border:0.2mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:4.5pt;font-weight:bold;line-height:1}";
+  css+="#printArea.small-label .service-print-note{font-size:4.8pt;line-height:0.9;margin-top:0.2mm}";
+ }
  css+="@media print{";
  css+="@page{size:"+widthText+" "+heightText+";margin:0;}";
  css+="html,body{width:"+widthText+"!important;height:"+heightText+"!important;margin:0!important;padding:0!important;background:white!important;}";
@@ -358,6 +375,24 @@ function applyLabelDimensions(width,height){
  if(isLarge){
   css+="#printArea.large-label{padding:2mm!important;}";
   css+="#printArea.large-label .label-header{font-size:7.8pt!important;line-height:1.15!important;margin:0 0 0.55mm!important}\n#printArea.large-label .header-email{display:block!important;width:100%!important;font-size:6.3pt!important;line-height:1.05!important;white-space:nowrap!important;letter-spacing:-0.3pt!important;overflow:hidden!important;text-align:center!important}\n#printArea.large-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:7.5pt!important;line-height:1.15!important}\n#printArea.large-label h3{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;width:100%!important;font-size:7.8pt!important;line-height:1!important;letter-spacing:-0.25pt!important;margin:0 0 0.1mm!important;padding:0!important}\n#printArea.large-label .label-info{font-size:7.5pt!important;line-height:1.15!important}\n#printArea.large-label .label-meta-row{font-size:7.2pt!important;line-height:1.1!important;gap:0.8mm!important;margin:0!important;padding:0!important}\n#printArea.large-label .service-section-title{font-size:7.8pt!important;line-height:1.1!important;margin:0!important;padding:0!important}\n#printArea.large-label .label-next{margin-top:0.3mm!important}\n#printArea.large-label .service-print-group{margin-top:0.1mm!important;padding:0!important}\n#printArea.large-label .service-print-title{font-size:7.5pt!important;line-height:1.1!important;margin:0 0 0.15mm!important;padding:0!important}\n#printArea.large-label .service-print-items{column-gap:1mm!important;row-gap:0!important}\n#printArea.large-label .service-print-item{font-size:6.8pt!important;line-height:1.08!important;gap:0.5mm!important;margin:0!important;padding:0!important}\n#printArea.large-label .service-check{width:2.3mm!important;height:2.3mm!important;min-width:2.3mm!important;font-size:4.8pt!important}\n#printArea.large-label .service-print-note{font-size:6.8pt!important;line-height:1.08!important;margin:0!important;padding:0!important}";
+ }
+ if(isSmall){
+  css+="#printArea.small-label{padding:2mm!important;}";
+  css+="#printArea.small-label .label-header{font-size:5.2pt!important;line-height:0.88!important;margin:0 0 0.25mm!important;flex:0 0 auto!important;}";
+  css+="#printArea.small-label .label-header>div{margin:0!important;padding:0!important;line-height:0.88!important;}";
+  css+="#printArea.small-label .header-email{font-size:4.2pt!important;line-height:0.78!important;white-space:nowrap!important;letter-spacing:-0.22pt!important;overflow:hidden!important;width:100%!important;}";
+  css+="#printArea.small-label .header-contact-row{display:flex!important;justify-content:space-evenly!important;align-items:center!important;gap:0!important;white-space:nowrap!important;font-size:4.8pt!important;line-height:0.82!important;}";
+  css+="#printArea.small-label h3{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;width:100%!important;font-size:5.8pt!important;line-height:0.85!important;letter-spacing:-0.2pt!important;margin:0!important;padding:0!important;}";
+  css+="#printArea.small-label .label-info{font-size:5.2pt!important;line-height:0.86!important;min-height:0!important;flex:0 1 auto!important;}";
+  css+="#printArea.small-label .label-meta-row{font-size:5pt!important;line-height:0.86!important;gap:0.4mm!important;margin:0!important;padding:0!important;}";
+  css+="#printArea.small-label .service-section-title{font-size:5.3pt!important;line-height:0.85!important;margin:0!important;padding:0!important;}";
+  css+="#printArea.small-label .label-next{margin-top:0.2mm!important;}";
+  css+="#printArea.small-label .service-print-group{margin-top:0.1mm!important;padding:0!important;}";
+  css+="#printArea.small-label .service-print-title{font-size:5pt!important;line-height:0.85!important;margin:0!important;padding:0!important;}";
+  css+="#printArea.small-label .service-print-items{column-gap:0.5mm!important;row-gap:0!important;}";
+  css+="#printArea.small-label .service-print-item{font-size:4.6pt!important;line-height:0.82!important;gap:0.3mm!important;margin:0!important;padding:0!important;}";
+  css+="#printArea.small-label .service-check{width:1.6mm!important;height:1.6mm!important;min-width:1.6mm!important;font-size:4pt!important;}";
+  css+="#printArea.small-label .service-print-note{font-size:4.6pt!important;line-height:0.85!important;margin:0!important;padding:0!important;}";
  }
  css+="}";
  const styleId="detected-label-size";
@@ -711,7 +746,7 @@ function render(){
   qr.addData(qrContent,"Byte");
   qr.make();
   $('qrcode').innerHTML=qr.createSvgTag({cellSize:4,margin:4,scalable:true});
-  const qrSize=labelDimensions.width>=45&&labelDimensions.height>=85?40:26;
+  const qrSize=activeLabelProfile.qr;
   const qrBox=$('printArea').querySelector(".qr-bottom");
   const qrElement=$('qrcode');
   [qrBox,qrElement].forEach(el=>{
