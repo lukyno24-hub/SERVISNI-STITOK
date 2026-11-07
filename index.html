@@ -207,7 +207,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="service-extra"><label for="extraNote">Ďalšia poznámka (nepovinné)</label><textarea id="extraNote" placeholder="Doplňujúce informácie k servisu"></textarea></div>
 </div>
 <div class="full">
- <label>Obdobie do nasledujúcej výmeny – môžeš vybrať viac možností</label>
+ <label>Obdobie do nasledujúcej výmeny</label>
  <div class="period-choice">
   <label><input type="checkbox" name="nextPeriod" value="6"> 0,5 roka</label>
   <label><input type="checkbox" name="nextPeriod" value="12"> 1 rok</label>
@@ -220,7 +220,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <input id="nextDate" type="hidden" value="">
 </div>
 <div class="full" id="kmIntervalPicker" hidden>
- <label>Interval kilometrov do ďalšej výmeny – môžeš vybrať viac možností</label>
+ <label>Interval kilometrov do ďalšej výmeny</label>
  <div class="period-choice">
   <label><input type="checkbox" name="kmInterval" value="1000"> 1 000</label>
   <label><input type="checkbox" name="kmInterval" value="2000"> 2 000</label>
@@ -233,6 +233,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
   <label id="timingInterval50000" hidden><input type="checkbox" name="kmInterval" value="50000"> 50 000</label>
   <label id="timingInterval100000" hidden><input type="checkbox" name="kmInterval" value="100000"> 100 000</label>
   <label id="timingInterval150000" hidden><input type="checkbox" name="kmInterval" value="150000"> 150 000</label>
+  <label id="timingInterval200000" hidden><input type="checkbox" name="kmInterval" value="200000"> 200 000</label>
  </div>
  <div class="next-date-result">Stav pri ďalšej výmene: <strong id="kmNextResult">Zadaj aktuálne kilometre a vyber interval</strong></div>
  <div id="nextKmField" hidden><input id="nextKm" inputmode="numeric" placeholder="170200" readonly></div>
@@ -1091,7 +1092,7 @@ function updateKmIntervalOptions(){
  const hasTiming=selectedParts.some(el=>el.dataset.group==="Výmena rozvodov");
  const show=unit==="km"&&(hasOil||hasTiming);
  $('kmIntervalPicker').hidden=!show;
- [20000,30000,50000,100000,150000].forEach(value=>{
+ [20000,30000,50000,100000,150000,200000].forEach(value=>{
   const label=$('timingInterval'+value);
   if(label) label.hidden=!hasTiming;
   if(!hasTiming){
