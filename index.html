@@ -32,6 +32,8 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-cabinet-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
 .filing-cabinet-list{display:grid;gap:8px;margin:10px 0}
 .filing-record-actions{display:flex;gap:8px;margin-top:8px}.filing-record-actions button{flex:1}
+.form-read-only input:disabled,.form-read-only select:disabled,.form-read-only textarea:disabled{opacity:1;color:#344054;background:#f1f3f5;cursor:default}
+.form-read-only details[data-read-only] summary{pointer-events:none;cursor:default}
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
 .filing-service-list{display:grid;gap:7px;margin-top:8px}
 .filing-service-entry{padding:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:5px}
@@ -162,10 +164,6 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
   </div>
   <input id="filingSearch" type="search" placeholder="Hľadať podľa stroja, mena alebo čísla">
   <div id="filingCabinetList" class="filing-cabinet-list"></div>
-  <div id="serviceReadOnlyView" class="filing-record" hidden>
-   <div class="filing-cabinet-head"><b>Servisný záznam – iba na čítanie</b><button type="button" class="light" onclick="closeServiceReadOnlyView()">Späť</button></div>
-   <div id="serviceReadOnlyContent"></div>
-  </div>
   <button type="button" class="light" onclick="changeLabelFolder()">📁 Zmeniť priečinok</button>
  </div>
 </div>
@@ -188,7 +186,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </div>
 </section>
 
-<section class="panel">
+<section class="panel" id="serviceFormPanel">
 <h2>1. Stroj / vozidlo</h2>
 <div class="grid">
 <div class="full machine-autocomplete-wrap"><label for="machine">Označenie stroja</label><input id="machine" list="machineSuggestions" autocomplete="off" placeholder="Začni písať označenie stroja"><datalist id="machineSuggestions"></datalist><div id="machineMatchStatus" class="small" aria-live="polite"></div></div>
@@ -292,7 +290,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <option value="small">Vybrať malú etiketu 50 × 30 mm</option>
  <option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>
 </select>
-<button class="light" onclick="clearForm()">Vyčistiť formulár</button>
+<button id="clearFormButton" class="light" onclick="clearForm()">Vyčistiť formulár</button>
 </div>
 <div id="appStatus" class="status">Vyber servisné položky a skontroluj ich v náhľade štítku.</div>
 </section>
@@ -1102,6 +1100,7 @@ async function stopScan(){if(activeScanner){try{await activeScanner.stop();activ
 
 
 function clearForm(){
+ if(viewingInternalService){returnToFilingCabinet();return;}
  $('date').value=today();
  $('current').value="";
  $('nextDate').value="";
@@ -1226,31 +1225,80 @@ function closeFilingCabinet(){
  $("filingCabinet").hidden=true;
 }
 function changeLabelFolder(){chooseLabelFolder();}
+let viewingInternalService=false;
+function setInternalFormReadOnly(readOnly){
+ const panel=$("serviceFormPanel");
+ if(!panel)return;
+ panel.querySelectorAll("input,select,textarea,button").forEach(el=>{
+  if(el.id==="clearFormButton")return;
+  el.disabled=readOnly;
+ });
+ panel.querySelectorAll("details").forEach(el=>{
+  if(readOnly)el.dataset.readOnly="true";
+  else delete el.dataset.readOnly;
+ });
+ panel.classList.toggle("form-read-only",readOnly);
+ viewingInternalService=readOnly;
+ $("clearFormButton").textContent=readOnly?"Späť":"Vyčistiť formulár";
+ $("clearFormButton").classList.toggle("secondary",readOnly);
+ $("clearFormButton").classList.toggle("light",!readOnly);
+}
+function returnToFilingCabinet(){
+ setInternalFormReadOnly(false);
+ openFilingCabinet();
+}
 function openInternalServiceRecord(key,index){
  const item=readInternalRecords()[key];
  if(!item||!item.records?.[index])return;
- const record=item.records[index];
- const hasUnit=record.unit==="km"||record.unit==="mh";
- const unit=record.unit==="mh"?"MTH":"KM";
- const owner=[item.ownerName,item.ownerNumber].filter(Boolean).join(" · ")||"Majiteľ nie je vyplnený";
- const rows=[
-  ["Stroj",item.machine||"—"],
-  ["Majiteľ",owner],
-  ["Dátum servisu",record.date?fmtDate(record.date):"—"],
-  ["Aktuálny stav",hasUnit&&record.current?record.current+" "+unit:"—"],
-  ["Servisný zásah",record.description||"—"],
-  ["Nasledujúci servis",record.nextDate?fmtDate(record.nextDate):"—"],
-  ["Stav pri nasledujúcom servise",hasUnit&&record.nextKm?record.nextKm+" "+unit:"—"]
- ];
- $("serviceReadOnlyContent").innerHTML=rows.map(([label,value])=>'<div class="filing-service-entry"><strong>'+escapeHtml(label)+'</strong><div>'+escapeHtml(value)+'</div></div>').join("");
- $("filingSearch").hidden=true;
- $("filingCabinetList").hidden=true;
- $("serviceReadOnlyView").hidden=false;
-}
-function closeServiceReadOnlyView(){
- $("serviceReadOnlyView").hidden=true;
- $("filingSearch").hidden=false;
- $("filingCabinetList").hidden=false;
+ const selected=item.records[index];
+ editingInternalService=null;
+ $("machine").value=item.machine||"";
+ $("ownerName").value=item.ownerName||"";
+ $("ownerNumber").value=item.ownerNumber||"";
+ $("date").value=selected.date||today();
+ $("current").value=selected.current||"";
+ $("nextKmManual").value=selected.unit==="mh"?(selected.nextKm||""):"";
+ document.querySelectorAll('input[name="unit"]').forEach(el=>{
+  el.checked=el.value===selected.unit;
+  el.dataset.wasSelected=el.checked?"true":"false";
+ });
+ document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
+ $("extraNote").value="";
+ String(selected.description||"").split(" | ").forEach(part=>{
+  const pos=part.indexOf(":");
+  if(pos<0)return;
+  const group=part.slice(0,pos).trim();
+  const valueText=part.slice(pos+1).trim();
+  if(group==="Poznámka"){$("extraNote").value=valueText;return;}
+  valueText.split(/,\s*/).map(v=>v.trim()).filter(Boolean).forEach(value=>{
+   const checkbox=[...document.querySelectorAll('input[name="servicePart"]')].find(el=>el.dataset.group===group&&el.value===value);
+   if(checkbox){checkbox.checked=true;const details=checkbox.closest("details");if(details)details.open=true;}
+  });
+ });
+ document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
+ if(selected.nextDate&&selected.date){
+  const from=new Date(selected.date+"T12:00:00"),to=new Date(selected.nextDate+"T12:00:00");
+  const months=(to.getFullYear()-from.getFullYear())*12+(to.getMonth()-from.getMonth());
+  const period=document.querySelector('input[name="nextPeriod"][value="'+months+'"]');
+  if(period)period.checked=true;
+ }
+ updateUnitLabels();
+ updateKmIntervalOptions();
+ if(selected.unit==="km"&&selected.current&&selected.nextKm){
+  const interval=Number(String(selected.nextKm).replace(/\s/g,""))-Number(String(selected.current).replace(/\s/g,""));
+  document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.checked=false);
+  const option=document.querySelector('input[name="kmInterval"][value="'+interval+'"]');
+  if(option)option.checked=true;
+  updateKmIntervalOptions();
+  $("nextKm").value=selected.nextKm;
+ }
+ updateNextDate();
+ if(selected.nextDate)$("nextDateDisplay").textContent=fmtDate(selected.nextDate);
+ render();
+ closeFilingCabinet();
+ setInternalFormReadOnly(true);
+ $("appStatus").textContent="Zobrazený servisný záznam je iba na čítanie.";
+ $("serviceFormPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function renderFilingCabinet(){
  const directory=readInternalRecords();
