@@ -165,6 +165,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <h2>1. Stroj / vozidlo</h2>
 <div class="grid">
 <div class="full"><label for="machine">Označenie stroja</label><input id="machine" placeholder="Napr. M2-001 alebo Škoda Octavia"></div>
+<div class="full"><b>Majiteľ – interné údaje</b></div>
+<div><label for="ownerName">Meno</label><input id="ownerName" autocomplete="name" placeholder="Meno majiteľa"></div>
+<div><label for="ownerNumber">Číslo</label><input id="ownerNumber" inputmode="numeric" placeholder="Číslo majiteľa"></div>
+<div class="full small">Meno a číslo sa ukladajú iba v tomto zariadení a nepridávajú sa do QR kódu ani na štítok.</div>
 <div><label for="date">Dátum servisného zásahu</label><input id="date" type="date"></div>
 <div class="full"><label>Jednotka merania (nepovinné)</label><div class="unit-choice">
 <label><input type="radio" name="unit" value="km"> Kilometre (km)</label>
@@ -916,9 +920,36 @@ function parsePayload(raw){
  // Obyčajný cudzí textový QR.
  return {app:"ServisnyAsistent",version:1,machine:$('machine').value.trim()||"Neznámy stroj",records:[{date:"",current:"",description:raw,nextDate:"",nextKm:""}]};
 }
+const OWNER_STORAGE_KEY="servisnyAsistentOwners_v1";
+function ownerMachineKey(value){
+ return String(value||"").trim().toLocaleLowerCase("sk-SK").replace(/\\s+/g," ");
+}
+function readOwnerDirectory(){
+ try{return JSON.parse(localStorage.getItem(OWNER_STORAGE_KEY)||"{}")||{};}
+ catch(e){return {};}
+}
+function loadOwnerForMachine(){
+ const key=ownerMachineKey($("machine").value);
+ const directory=readOwnerDirectory();
+ const owner=key?directory[key]:null;
+ $("ownerName").value=owner?.name||"";
+ $("ownerNumber").value=owner?.number||"";
+}
+function saveOwnerForMachine(){
+ const key=ownerMachineKey($("machine").value);
+ if(!key)return;
+ const directory=readOwnerDirectory();
+ const name=$("ownerName").value.trim();
+ const number=$("ownerNumber").value.trim();
+ if(!name&&!number) delete directory[key];
+ else directory[key]={name,number,updatedAt:new Date().toISOString()};
+ try{localStorage.setItem(OWNER_STORAGE_KEY,JSON.stringify(directory));}
+ catch(e){$("appStatus").textContent="Interné údaje majiteľa sa nepodarilo uložiť v tomto zariadení.";}
+}
 function loadQR(raw){
  const obj=parsePayload(raw);
  if(obj.machine)$('machine').value=obj.machine;
+ loadOwnerForMachine();
  records=Array.isArray(obj.records)?obj.records:[];
  render();renderHistory();
  $('scanStatus').textContent=`Načítané z QR kódu: ${obj.machine||"stroj"} • ${records.length} servisných záznamov. Vyber nový servisný zásah; nový QR kód sa bude aktualizovať v náhľade.`;
@@ -1140,6 +1171,11 @@ document.querySelectorAll('input[name="unit"]').forEach(el=>{
  el.addEventListener('change',()=>{updateUnitLabels();updateKmIntervalOptions();render()});
 });
 $('machine').addEventListener('input',()=>{if(records.length)render();renderHistory()});
+$('machine').addEventListener('change',loadOwnerForMachine);
+$('ownerName').addEventListener('change',saveOwnerForMachine);
+$('ownerNumber').addEventListener('change',saveOwnerForMachine);
+$('ownerName').addEventListener('blur',saveOwnerForMachine);
+$('ownerNumber').addEventListener('blur',saveOwnerForMachine);
 document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
 $('date').addEventListener('input',()=>{updateNextDate();render()});
 $('date').addEventListener('change',()=>{updateNextDate();render()});
