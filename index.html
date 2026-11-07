@@ -285,6 +285,23 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </main>
 <script>
 let records=[], activeScanner=null, currentLabel=null;
+const LABEL_PROFILES={
+ small:{
+  id:"small-50x30",
+  name:"Malá etiketa",
+  detected:[{width:50,height:30},{width:30,height:50}],
+  width:30,height:50,qr:26,
+  page:"30mm 50mm"
+ },
+ large:{
+  id:"large-50x90",
+  name:"Veľká etiketa",
+  detected:[{width:50,height:90}],
+  width:50,height:90,qr:40,
+  page:"50mm 90mm"
+ }
+};
+let activeLabelProfile=LABEL_PROFILES.small;
 let labelDimensions={width:30,height:50};
 let printerDevice=null, printerTx=null, printerRx=null;
 let printerProtocolVersion=null;
@@ -300,21 +317,27 @@ const printerUuids=[
 const $=id=>document.getElementById(id);
 function applyLabelDimensions(width,height){
  width=Number(width);height=Number(height);
- if(!Number.isFinite(width)||!Number.isFinite(height)||width<10||width>100||height<10||height>200)return false;
- // Rozmery z RFID orientujeme na stojato, ako v pôvodných šablónach.
- let layoutWidth=width,layoutHeight=height;
- if(layoutWidth>layoutHeight){const swap=layoutWidth;layoutWidth=layoutHeight;layoutHeight=swap;}
- labelDimensions={width:layoutWidth,height:layoutHeight};
- const isLarge=Math.abs(layoutWidth-50)<0.2&&Math.abs(layoutHeight-90)<0.2;
- const isSmall=Math.abs(layoutWidth-30)<0.2&&Math.abs(layoutHeight-50)<0.2;
+ if(!Number.isFinite(width)||!Number.isFinite(height))return false;
+ const near=(a,b)=>Math.abs(a-b)<0.2;
+ const profile=Object.values(LABEL_PROFILES).find(item=>
+  item.detected.some(size=>near(width,size.width)&&near(height,size.height))
+ );
+ if(!profile)return false;
+ activeLabelProfile=profile;
+ labelDimensions={width:profile.width,height:profile.height};
+ const isLarge=profile===LABEL_PROFILES.large;
+ const isSmall=profile===LABEL_PROFILES.small;
+ const layoutWidth=profile.width,layoutHeight=profile.height;
  const widthText=layoutWidth+"mm",heightText=layoutHeight+"mm";
- const labelText=layoutWidth+" × "+layoutHeight+" mm";
+ const labelText=profile.width+" × "+profile.height+" mm";
  const area=$("printArea");
  area.classList.toggle("large-label",isLarge);
  area.classList.toggle("small-label",isSmall);
+ area.dataset.labelProfile=profile.id;
+ document.documentElement.dataset.labelProfile=profile.id;
  $("previewHeading").textContent="Náhľad štítku "+labelText;
  document.querySelectorAll(".preview-launch").forEach(button=>button.textContent="👁 Náhľad štítku "+labelText);
- const qrSize=isLarge?40:26;
+ const qrSize=profile.qr;
  let css="";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;}";
  css+="#printArea .qr-bottom,#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
@@ -481,8 +504,8 @@ async function detectOtherPrinterInfo(){
   const height=modelId===785?totalHeight-gapHeight:totalHeight;
   if(width<10||width>100||height<10||height>200) throw new Error("Neplatné rozmery "+width+" × "+height+" mm.");
   if(!applyLabelDimensions(width,height)) throw new Error("Načítaný rozmer nie je platný.");
-  $('paperSizeStatus').textContent=width+" × "+height+" mm";
-  $('printerStatus').textContent="Rozpoznaný rozmer etikety: "+width+" × "+height+" mm";
+  $('paperSizeStatus').textContent=width+" × "+height+" mm · profil: "+activeLabelProfile.name;
+  $('printerStatus').textContent="Pripojená: "+(printerDevice.name||"Niimbot M2")+" · aktívny profil: "+activeLabelProfile.name+" ("+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm)";
   render();
  }catch(e){
   $('paperSizeStatus').textContent="Rozmer sa nepodarilo načítať z RFID: "+(e?.message||String(e));
