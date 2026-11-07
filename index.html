@@ -137,7 +137,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .preview-stage{display:flex;justify-content:center;align-items:flex-start;background:#edf0f3;padding:12px;border-radius:10px;overflow:auto}
 .preview-actions{display:flex;gap:9px;margin-top:12px}.preview-actions button{flex:1}
 .preview-print-status{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:13px;font-weight:600}
-.preview-print-status input{width:58px;height:30px;margin:0;padding:3px 5px;text-align:center;font-size:13px;font-weight:700}
+.preview-print-status .print-count-toggle{width:42px;min-width:42px;height:30px;margin:0;padding:2px 5px;border:1px solid #cfd4dc;border-radius:5px;background:#fff;color:#344054;text-align:center;font-size:14px;font-weight:700;line-height:1}
 .preview-print-status span{font-size:12px;font-weight:600;color:#344054}
 .preview-print-status[hidden]{display:none!important}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.full{grid-column:auto}.actions .full{grid-column:auto}.preview-dialog{padding:12px}.preview-actions{flex-direction:column}}
@@ -174,7 +174,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.9</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.0</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -334,7 +334,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </div>
 <div id="previewPrintedStatus" class="preview-print-status" hidden>
  <label for="previewPrintCountInput">Vytlačené</label>
- <input id="previewPrintCountInput" type="text" inputmode="numeric" value="0" aria-label="Počet výtlačkov">
+ <button id="previewPrintCountInput" type="button" class="print-count-toggle" aria-label="Zmeniť označenie vytlačenia"> </button>
  <span>výtlačkov</span>
 </div>
 <div id="saveCopyStatus" class="save-copy-status" role="status">Pri tlači sa uloží aj PNG kópia etikety.</div>
@@ -1590,27 +1590,30 @@ function printAndSaveLabel(){
  });
 }
 function formatPrintedCount(value){
- const entered=String(value).trim();
- const count=entered==="✓"?1:Math.max(0,Math.floor(Number(entered)||0));
+ const count=Math.max(0,Math.floor(Number(value)||0));
  return count===0?"":count===1?"✓":String(count);
+}
+function updatePrintCountControl(){
+ const control=$("previewPrintCountInput");
+ if(!control||!viewingInternalService||!viewingInternalServiceRef)return;
+ const {key,index}=viewingInternalServiceRef;
+ const item=readInternalRecords()[key];
+ const record=item&&item.records&&item.records[index];
+ const count=Math.max(0,Number(record?.printCount)||(record?.printed===true?1:0));
+ control.textContent=formatPrintedCount(count)||" ";
+ control.dataset.count=String(count);
 }
 function updatePreviewActionMode(){
  const saveButton=$("previewSaveButton");
  const printButton=$("previewPrintButton");
  const saveCopyStatus=$("saveCopyStatus");
  const printedStatus=$("previewPrintedStatus");
- const printCountInput=$("previewPrintCountInput");
  if(!saveButton||!printButton)return;
  saveButton.hidden=!!viewingInternalService;
  printButton.textContent=viewingInternalService?"🖨️ Tlačiť":"🖨️ Uložiť a tlačiť štítok";
  if(saveCopyStatus)saveCopyStatus.hidden=!!viewingInternalService;
  if(printedStatus)printedStatus.hidden=!viewingInternalService;
- if(viewingInternalService&&viewingInternalServiceRef&&printCountInput){
-  const {key,index}=viewingInternalServiceRef;
-  const item=readInternalRecords()[key];
-  const record=item&&item.records&&item.records[index];
-  printCountInput.value=formatPrintedCount(Number(record?.printCount)||(record?.printed===true?1:0));
- }
+ updatePrintCountControl();
 }
 function setViewedServicePrintCount(value){
  if(!viewingInternalServiceRef)return;
@@ -1627,6 +1630,14 @@ function setViewedServicePrintCount(value){
  item.updatedAt=new Date().toISOString();
  directory[key]=item;
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
+ updatePrintCountControl();
+}
+function cycleViewedServicePrintCount(){
+ if(!viewingInternalServiceRef)return;
+ const control=$("previewPrintCountInput");
+ const current=Math.max(0,Number(control?.dataset.count)||0);
+ const next=current===0?1:current===1?2:0;
+ setViewedServicePrintCount(next);
 }
 function markViewedServiceAsPrinted(){
  if(!viewingInternalServiceRef)return;
@@ -1642,8 +1653,7 @@ function markViewedServiceAsPrinted(){
  item.updatedAt=new Date().toISOString();
  directory[key]=item;
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
- const countInput=$("previewPrintCountInput");
- if(countInput)countInput.value=formatPrintedCount(record.printCount);
+ updatePrintCountControl();
 }
 function handlePreviewPrint(){
  if(viewingInternalService){
@@ -1666,10 +1676,7 @@ function openPreview(){
 function closePreview(){
  $('previewModal').classList.remove('open');
 }
-$("previewPrintCountInput").addEventListener("change",event=>{
- setViewedServicePrintCount(event.target.value);
- updatePreviewActionMode();
-});
+$("previewPrintCountInput").addEventListener("click",cycleViewedServicePrintCount);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
 function updateUnitLabels(){
  const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
