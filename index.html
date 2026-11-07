@@ -38,6 +38,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 #printerStatus #paperSizeStatus{font-weight:400}
 #printerStatus #paperSizeStatus strong{font-weight:700}
 #printerStatus .printer-usage{text-align:center}
+#printerStatus .printer-usage .consumed-value{color:#dc2626}
 #printerStatus [hidden]{display:none!important}
 
 .machine-autocomplete-wrap{position:relative}
@@ -165,7 +166,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.2</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.3</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -173,8 +174,8 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <div id="printerMediaInfo" hidden>
   <div id="paperSizeStatus">Rozmer štítku: —</div>
   <div class="printer-usage">
-   <div>· Štítky – spotrebované / celkom <strong id="labelUsage">— / —</strong></div>
-   <div>· Páska – spotrebované / celkom <strong id="ribbonUsage">— / —</strong></div>
+   <div>· Štítky – spotrebované / celkom <strong><span class="consumed-value" id="labelUsed">—</span> / <span id="labelTotal">—</span></strong></div>
+   <div>· Páska – spotrebované / celkom <strong><span class="consumed-value" id="ribbonUsed">—</span> / <span id="ribbonTotal">—</span></strong></div>
   </div>
  </div>
  <span id="labelRemaining" hidden></span><span id="ribbonRemaining" hidden></span>
@@ -527,9 +528,11 @@ function setPrinterState(connected,message){
   printerProtocolVersion=null;
   $('printerMediaInfo').hidden=true;
   $('paperSizeStatus').textContent="Tlačiareň nie je pripojená.";
-  $('labelUsage').textContent="— / —";
+  $('labelUsed').textContent="—";
+  $('labelTotal').textContent="—";
   $('labelRemaining').textContent="—";
-  $('ribbonUsage').textContent="— / —";
+  $('ribbonUsed').textContent="—";
+  $('ribbonTotal').textContent="—";
   $('ribbonRemaining').textContent="—";
  }
 }
@@ -622,9 +625,11 @@ function decodeRfidInfo(data){
 }
 async function detectOtherPrinterInfo(){
  $('paperSizeStatus').textContent="Načítavam rozmer štítku z RFID…";
- $('labelUsage').textContent="— / —";
+ $('labelUsed').textContent="—";
+  $('labelTotal').textContent="—";
  $('labelRemaining').textContent="—";
- $('ribbonUsage').textContent="— / —";
+ $('ribbonUsed').textContent="—";
+  $('ribbonTotal').textContent="—";
  $('ribbonRemaining').textContent="—";
 
  let label=null,ribbon=null,modelId=null;
@@ -657,11 +662,13 @@ async function detectOtherPrinterInfo(){
   $('paperSizeStatus').textContent="Rozmer sa nepodarilo načítať z RFID: "+(e?.message||String(e));
  }
  if(label&&label.tagPresent&&label.total>=0&&label.used>=0){
-  $('labelUsage').textContent=label.used+" / "+label.total;
+  $('labelUsed').textContent=String(label.used);
+  $('labelTotal').textContent=String(label.total);
   $('labelRemaining').textContent=String(Math.max(0,label.total-label.used));
  }
  if(ribbon&&ribbon.tagPresent&&ribbon.total>=0&&ribbon.used>=0){
-  $('ribbonUsage').textContent=ribbon.used+" / "+ribbon.total;
+  $('ribbonUsed').textContent=String(ribbon.used);
+  $('ribbonTotal').textContent=String(ribbon.total);
   $('ribbonRemaining').textContent=String(Math.max(0,ribbon.total-ribbon.used));
  }
 }
