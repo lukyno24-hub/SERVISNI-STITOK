@@ -135,6 +135,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .preview-dialog-head h2{margin:0;font-size:18px}
 .preview-stage{display:flex;justify-content:center;align-items:flex-start;background:#edf0f3;padding:12px;border-radius:10px;overflow:auto}
 .preview-actions{display:flex;gap:9px;margin-top:12px}.preview-actions button{flex:1}
+.preview-print-status{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:13px;font-weight:600}
+.preview-print-status input{width:17px;height:17px;margin:0;accent-color:var(--green)}
+.preview-print-status[hidden]{display:none!important}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.full{grid-column:auto}.actions .full{grid-column:auto}.preview-dialog{padding:12px}.preview-actions{flex-direction:column}}
 @media print{
  @page{size:30mm 50mm;margin:0}
@@ -143,7 +146,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  main>*:not(#previewModal){display:none!important}
  #previewModal{display:block!important;position:static!important;inset:auto!important;width:30mm;height:50mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
  .preview-dialog{display:block!important;width:30mm!important;height:50mm!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important}
- .preview-dialog-head,.preview-actions{display:none!important}
+ .preview-dialog-head,.preview-actions,.preview-print-status{display:none!important}
  .preview-stage{display:block!important;width:30mm;height:50mm;padding:0!important;margin:0!important;background:white!important;overflow:hidden!important}
  #printArea{display:flex!important;flex-direction:column!important;box-sizing:border-box!important;width:30mm;height:50mm;margin:0;padding:2mm;border:0;overflow:hidden}
  .label-header{font-size:5.2pt!important;line-height:0.88!important;margin:0 0 0.25mm!important;flex:0 0 auto!important}
@@ -169,7 +172,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.4</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.5</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -326,6 +329,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="preview-actions">
 <button id="previewSaveButton" class="secondary" type="button" onclick="saveLabelCopy().catch(error=>$('saveCopyStatus').textContent='Uloženie zlyhalo: '+(error?.message||String(error)))">💾 Uložiť štítok</button>
 <button id="previewPrintButton" class="primary" type="button" onclick="handlePreviewPrint()">🖨️ Uložiť a tlačiť štítok</button>
+</div>
+<div id="previewPrintedStatus" class="preview-print-status" hidden>
+ <label for="previewPrintedCheckbox">Vytlačené</label>
+ <input id="previewPrintedCheckbox" type="checkbox">
 </div>
 <div id="saveCopyStatus" class="save-copy-status" role="status">Pri tlači sa uloží aj PNG kópia etikety.</div>
 </div></div>
@@ -1582,22 +1589,36 @@ function updatePreviewActionMode(){
  const saveButton=$("previewSaveButton");
  const printButton=$("previewPrintButton");
  const saveCopyStatus=$("saveCopyStatus");
+ const printedStatus=$("previewPrintedStatus");
+ const printedCheckbox=$("previewPrintedCheckbox");
  if(!saveButton||!printButton)return;
  saveButton.hidden=!!viewingInternalService;
  printButton.textContent=viewingInternalService?"🖨️ Tlačiť":"🖨️ Uložiť a tlačiť štítok";
  if(saveCopyStatus)saveCopyStatus.hidden=!!viewingInternalService;
+ if(printedStatus)printedStatus.hidden=!viewingInternalService;
+ if(viewingInternalService&&viewingInternalServiceRef&&printedCheckbox){
+  const {key,index}=viewingInternalServiceRef;
+  const item=readInternalRecords()[key];
+  printedCheckbox.checked=!!(item&&item.records&&item.records[index]&&item.records[index].printed===true);
+ }
 }
-function markViewedServiceAsPrinted(){
+function setViewedServicePrinted(checked){
  if(!viewingInternalServiceRef)return;
  const {key,index}=viewingInternalServiceRef;
  const directory=readInternalRecords();
  const item=directory[key];
  if(!item||!Array.isArray(item.records)||!item.records[index])return;
- item.records[index].printed=true;
- item.records[index].printedAt=new Date().toISOString();
+ item.records[index].printed=!!checked;
+ if(checked)item.records[index].printedAt=item.records[index].printedAt||new Date().toISOString();
+ else delete item.records[index].printedAt;
  item.updatedAt=new Date().toISOString();
  directory[key]=item;
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
+}
+function markViewedServiceAsPrinted(){
+ setViewedServicePrinted(true);
+ const checkbox=$("previewPrintedCheckbox");
+ if(checkbox)checkbox.checked=true;
 }
 function handlePreviewPrint(){
  if(viewingInternalService){
@@ -1620,6 +1641,7 @@ function openPreview(){
 function closePreview(){
  $('previewModal').classList.remove('open');
 }
+$("previewPrintedCheckbox").addEventListener("change",event=>setViewedServicePrinted(event.target.checked));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closePreview()});
 function updateUnitLabels(){
  const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
