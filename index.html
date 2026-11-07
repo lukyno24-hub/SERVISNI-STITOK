@@ -1273,7 +1273,7 @@ function renderFilingCabinet(){
    const originalIndex=(item.records||[]).length-1-index;
    return '<div class="filing-service-entry"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
-  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button></div></div>';
+  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  $("filingCabinetList").querySelectorAll("[data-delete-service]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.deleteService;
@@ -1289,6 +1289,27 @@ function renderFilingCabinet(){
   directory[key]=item;
   localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
   if(ownerMachineKey($("machine").value)===key)records=Array.isArray(item.records)?item.records:[];
+  renderFilingCabinet();
+ }));
+ $("filingCabinetList").querySelectorAll("[data-delete-machine]").forEach(button=>button.addEventListener("click",()=>{
+  const key=button.dataset.deleteMachine;
+  const item=readInternalRecords()[key];
+  if(!item)return;
+  const name=item.machine||"Neoznačený stroj";
+  if(!confirm("Naozaj chceš vymazať celý stroj „"+name+"“ vrátane majiteľa a všetkých servisných zásahov? Túto akciu nemožno vrátiť späť."))return;
+  const directory=readInternalRecords();
+  delete directory[key];
+  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
+  const owners=readOwnerDirectory();
+  delete owners[key];
+  localStorage.setItem(OWNER_STORAGE_KEY,JSON.stringify(owners));
+  if(ownerMachineKey($("machine").value)===key){
+   $("ownerName").value="";
+   $("ownerNumber").value="";
+   $("machine").value="";
+   records=[];
+   render();
+  }
   renderFilingCabinet();
  }));
  $("filingCabinetList").querySelectorAll("[data-open-service]").forEach(button=>button.addEventListener("click",()=>{
