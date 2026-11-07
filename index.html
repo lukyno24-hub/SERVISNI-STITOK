@@ -285,7 +285,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel">
 <h2>3. Náhľad a tlač štítku</h2>
 <div class="actions">
-<select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad">
+<select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad" onclick="if(viewingInternalService)openPreview()">
  <option value="preview">👁 Náhľad štítku 30 × 50 mm</option>
  <option value="small">Vybrať malú etiketu 50 × 30 mm</option>
  <option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>
@@ -1240,7 +1240,7 @@ function setInternalFormReadOnly(readOnly){
   previewSelector.value="preview";
  }
  panel.querySelectorAll("input,select,textarea,button").forEach(el=>{
-  if(el.id==="clearFormButton")return;
+  if(el.id==="clearFormButton"||el.id==="previewSizeButton")return;
   el.disabled=readOnly;
  });
  panel.querySelectorAll("details").forEach(el=>{
