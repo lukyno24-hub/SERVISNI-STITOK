@@ -29,6 +29,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-cabinet{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;text-align:left}
 .filing-cabinet-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
 .filing-cabinet-list{display:grid;gap:8px;margin:10px 0}
+.filing-record-actions{display:flex;gap:8px;margin-top:8px}.filing-record-actions button{flex:1}
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
 .filing-record strong{display:block;margin-bottom:4px}
 .filing-record .small{color:var(--muted);font-size:12px}
@@ -1116,8 +1117,26 @@ function renderFilingCabinet(){
   const latest=(item.records||[]).slice(-1)[0];
   const owner=[item.ownerName,item.ownerNumber].filter(Boolean).join(" · ")||"Majiteľ nie je vyplnený";
   const latestText=latest?("Posledný servis: "+(latest.date?fmtDate(latest.date):"bez dátumu")+" · "+String(latest.description||"").slice(0,100)):"Zatiaľ bez servisného záznamu";
-  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+escapeHtml(latestText)+'</div><div class="small">'+(item.records||[]).length+' servisných záznamov</div><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť záznam</button></div>';
+  return '<div class="filing-record"><strong>'+escapeHtml(item.machine||"Neoznačený stroj")+'</strong><div>'+escapeHtml(owner)+'</div><div class="small">'+escapeHtml(latestText)+'</div><div class="small">'+(item.records||[]).length+' servisných záznamov</div><div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
+ $("filingCabinetList").querySelectorAll("[data-delete-machine]").forEach(button=>button.addEventListener("click",()=>{
+  const key=button.dataset.deleteMachine;
+  const item=readInternalRecords()[key];
+  if(!item)return;
+  const name=item.machine||"Neoznačený stroj";
+  if(!confirm("Naozaj chceš vymazať interný záznam stroja „"+name+"“ vrátane majiteľa a servisnej histórie? Túto akciu nemožno vrátiť späť."))return;
+  const directory=readInternalRecords();
+  delete directory[key];
+  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
+  const owners=readOwnerDirectory();
+  delete owners[key];
+  localStorage.setItem(OWNER_STORAGE_KEY,JSON.stringify(owners));
+  if(ownerMachineKey($("machine").value)===key){
+   $("ownerName").value="";
+   $("ownerNumber").value="";
+  }
+  renderFilingCabinet();
+ }));
  $("filingCabinetList").querySelectorAll("[data-open-machine]").forEach(button=>button.addEventListener("click",()=>{
   const item=readInternalRecords()[button.dataset.openMachine];
   if(!item)return;
