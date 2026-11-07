@@ -331,15 +331,24 @@ function applyLabelDimensions(width,height){
  const widthText=layoutWidth+"mm",heightText=layoutHeight+"mm";
  const labelText=profile.width+" × "+profile.height+" mm";
  const area=$("printArea");
+ const modal=$("previewModal");
+ const stage=document.querySelector(".preview-stage");
+ const dialog=document.querySelector(".preview-dialog");
+ [area,modal,stage,dialog].forEach(el=>{
+  if(el) el.dataset.labelProfile=profile.id;
+ });
  area.classList.toggle("large-label",isLarge);
  area.classList.toggle("small-label",isSmall);
- area.dataset.labelProfile=profile.id;
  document.documentElement.dataset.labelProfile=profile.id;
  $("previewHeading").textContent="Náhľad štítku "+labelText;
  document.querySelectorAll(".preview-launch").forEach(button=>button.textContent="👁 Náhľad štítku "+labelText);
  const qrSize=profile.qr;
  let css="";
- css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;}";
+ css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;min-width:"+widthText+"!important;min-height:"+heightText+"!important;box-sizing:border-box!important;}";
+ css+=".preview-stage{min-width:calc("+widthText+" + 24px)!important;min-height:calc("+heightText+" + 24px)!important;box-sizing:border-box!important;}";
+ css+=".preview-dialog{width:min(100%,calc("+widthText+" + 72px))!important;max-width:calc(100vw - 32px)!important;}";
+ css+="#previewModal{align-items:center!important;}";
+ 
  css+="#printArea .qr-bottom,#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode svg,#printArea #qrcode img,#printArea #qrcode canvas{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-width:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;max-width:none!important;max-height:none!important;display:block!important;}";
  if(isLarge){
@@ -364,6 +373,7 @@ function applyLabelDimensions(width,height){
  }
  css+="@media print{";
  css+="@page{size:"+widthText+" "+heightText+";margin:0;}";
+ css+="@media print{#previewModal,.preview-dialog,.preview-stage,#printArea{width:"+widthText+"!important;height:"+heightText+"!important;min-width:"+widthText+"!important;min-height:"+heightText+"!important;max-width:none!important;max-height:none!important;box-sizing:border-box!important;}}";
  css+="html,body{width:"+widthText+"!important;height:"+heightText+"!important;margin:0!important;padding:0!important;background:white!important;}";
  css+="main{width:"+widthText+"!important;height:"+heightText+"!important;margin:0!important;padding:0!important;}";
  css+="#previewModal{width:"+widthText+"!important;height:"+heightText+"!important;padding:0!important;margin:0!important;}";
@@ -399,6 +409,12 @@ function applyLabelDimensions(width,height){
  let style=document.getElementById(styleId);
  if(!style){style=document.createElement("style");style.id=styleId;document.head.appendChild(style);}
  style.textContent=css;
+ // Vynútime prekreslenie náhľadu po zmene RFID profilu.
+ area.style.setProperty("width",widthText,"important");
+ area.style.setProperty("height",heightText,"important");
+ area.style.setProperty("min-width",widthText,"important");
+ area.style.setProperty("min-height",heightText,"important");
+ void area.offsetWidth;
  return true;
 }
 function printerPacket(cmd,data=[]){
