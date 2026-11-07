@@ -310,8 +310,8 @@ function applyLabelDimensions(width,height){
  const qrSize=isLarge?40:26;
  let css="";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;}";
- css+=".preview-stage{width:"+widthText+"!important;height:"+heightText+"!important;}";
- css+=".preview-dialog{width:"+widthText+"!important;height:"+heightText+"!important;}";
+ // Na obrazovke zostane dialóg dostatočne široký aj pre ovládacie tlačidlá;
+ // presné rozmery stránky nastavujeme iba pri tlači.
  css+="#printArea .qr-bottom{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;min-height:"+qrSize+"mm!important;flex:0 0 "+qrSize+"mm!important;}";
  css+="#printArea #qrcode img,#printArea #qrcode canvas,#printArea #qrcode svg{width:"+qrSize+"mm!important;height:"+qrSize+"mm!important;}";
