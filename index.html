@@ -756,10 +756,10 @@ function render(){
  const hasUnit=shown.unit==="km"||shown.unit==="mh";
  const unitText=shown.unit==="mh"?"MTH":"KM";
  const serviceLines=formatServiceForLabel(shown.description||"");
- const currentMeta=hasUnit&&shown.current?'<div class="label-meta-row"><span class="meta-value">'+unitText+": "+escapeHtml(shown.current)+'</span></div>':"";
- const nextMeta=hasUnit&&shown.nextKm?'<div class="label-meta-row"><span class="meta-value">'+unitText+": "+escapeHtml(shown.nextKm)+'</span></div>':"";
- $('labelCurrent').innerHTML='<b class="service-section-title">Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.date))+'</span></div>'+currentMeta+serviceLines;
- $('labelNext').innerHTML='<b class="service-section-title">Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.nextDate))+'</span></div>'+nextMeta;
+ const currentMeta=hasUnit&&shown.current?'<span class="meta-value">'+unitText+": "+escapeHtml(shown.current)+'</span>':"";
+ const nextMeta=hasUnit&&shown.nextKm?'<span class="meta-value">'+unitText+": "+escapeHtml(shown.nextKm)+'</span>':"";
+ $('labelCurrent').innerHTML='<b class="service-section-title">Posledný servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.date))+'</span>'+currentMeta+'</div>'+serviceLines;
+ $('labelNext').innerHTML='<b class="service-section-title">Nasledujúci servis</b><div class="label-meta-row"><span class="meta-date">Dátum: '+escapeHtml(fmtDate(shown.nextDate))+'</span>'+nextMeta+'</div>';
  $('qrcode').innerHTML="";
  if(typeof qrcode==="undefined"){$('qrcode').textContent="QR knižnica sa nenačítala";return;}
  const qrPayload=payload();
