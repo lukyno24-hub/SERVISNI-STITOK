@@ -1058,22 +1058,29 @@ function updateOwnerAutocomplete(field){
  });
  if(!query){
   $("ownerMatchStatus").textContent="";
-  return;
- }
- const exact=matches.filter(item=>ownerMachineKey(fieldValue(item))===query);
- const unique=exact.length===1?exact[0]:(exact.length===0&&matches.length===1?matches[0]:null);
- if(unique){
-  $("machine").value=unique.machine;
-  $("ownerName").value=unique.name;
-  $("ownerNumber").value=unique.number;
-  autoFilledMachineKey=unique.key;
-  $("machineMatchStatus").textContent="Nájdené v kartotéke: "+unique.machine;
-  $("ownerMatchStatus").textContent="Načítané z kartotéky: "+unique.machine;
  }else if(matches.length>1){
   $("ownerMatchStatus").textContent="Nájdených "+matches.length+" zhôd. Vyber správne meno alebo číslo zo zoznamu.";
+ }else if(matches.length===1){
+  $("ownerMatchStatus").textContent="Nájdená zhoda v kartotéke. Pokračuj v písaní alebo vyber ponúknutú položku.";
  }else{
-  $("ownerMatchStatus").textContent="V kartotéke sa nenašla zhoda.";
+  $("ownerMatchStatus").textContent="V kartotéke sa nenašla zhoda. Môžeš zadať nový údaj.";
  }
+}
+function selectOwnerAutocompleteMatch(field){
+ const isName=field==="name";
+ const input=$(isName?"ownerName":"ownerNumber");
+ const query=ownerMachineKey(input.value);
+ if(!query)return false;
+ const entries=getMachineDirectoryEntries();
+ const match=entries.find(item=>ownerMachineKey(String(isName?item.name:item.number||"").trim())===query);
+ if(!match)return false;
+ $("machine").value=match.machine;
+ $("ownerName").value=match.name;
+ $("ownerNumber").value=match.number;
+ autoFilledMachineKey=match.key;
+ $("machineMatchStatus").textContent="Nájdené v kartotéke: "+match.machine;
+ $("ownerMatchStatus").textContent="Načítané z kartotéky: "+match.machine;
+ return true;
 }
 function saveOwnerForMachine(){
  const key=ownerMachineKey($("machine").value);
@@ -1648,8 +1655,8 @@ $('machine').addEventListener('change',()=>{
 $('filingSearch').addEventListener('input',renderFilingCabinet);
 $('ownerName').addEventListener('input',()=>updateOwnerAutocomplete("name"));
 $('ownerNumber').addEventListener('input',()=>updateOwnerAutocomplete("number"));
-$('ownerName').addEventListener('change',()=>{updateOwnerAutocomplete("name");saveOwnerForMachine();saveInternalMachineRecord()});
-$('ownerNumber').addEventListener('change',()=>{updateOwnerAutocomplete("number");saveOwnerForMachine();saveInternalMachineRecord()});
+$('ownerName').addEventListener('change',()=>{selectOwnerAutocompleteMatch("name");saveOwnerForMachine();saveInternalMachineRecord()});
+$('ownerNumber').addEventListener('change',()=>{selectOwnerAutocompleteMatch("number");saveOwnerForMachine();saveInternalMachineRecord()});
 $('ownerName').addEventListener('blur',()=>{saveOwnerForMachine();saveInternalMachineRecord()});
 $('ownerNumber').addEventListener('blur',()=>{saveOwnerForMachine();saveInternalMachineRecord()});
 document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.addEventListener('change',()=>{updateNextDate();render()}));
