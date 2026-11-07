@@ -275,8 +275,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <h2>3. Náhľad a tlač štítku</h2>
 <div class="actions">
 <select id="previewSizeButton" class="preview-launch full" aria-label="Vyber rozmer štítku a otvor náhľad">
- <option value="small">👁 Náhľad štítku · 50 × 30 mm</option>
- <option value="large">👁 Náhľad štítku · 50 × 90 mm</option>
+ <option value="preview">👁 Náhľad štítku 30 × 50 mm</option>
+ <option value="small">Vybrať malú etiketu 50 × 30 mm</option>
+ <option value="large">Vybrať veľkú etiketu 50 × 90 mm</option>
 </select>
 <button class="light" onclick="clearForm()">Vyčistiť formulár</button>
 </div>
@@ -376,7 +377,10 @@ function applyLabelDimensions(width,height){
  document.documentElement.dataset.labelProfile=profile.id;
  $("previewHeading").textContent="Náhľad štítku "+labelText;
  const previewSizeButton=$("previewSizeButton");
- if(previewSizeButton) previewSizeButton.value=isLarge?"large":"small";
+ if(previewSizeButton){
+  previewSizeButton.options[0].textContent="👁 Náhľad štítku "+labelText;
+  previewSizeButton.value="preview";
+ }
  const qrSize=profile.qr;
  let css="";
  css+="#printArea{width:"+widthText+"!important;height:"+heightText+"!important;min-width:"+widthText+"!important;min-height:"+heightText+"!important;box-sizing:border-box!important;}";
@@ -462,19 +466,31 @@ function printerPacket(cmd,data=[]){
  return new Uint8Array(packet);
 }
 function setManualLabelSize(value){
- if(printerDevice?.gatt?.connected)return;
+ const selector=$("previewSizeButton");
+ if(printerDevice?.gatt?.connected){
+  selector.value="preview";
+  openPreview();
+  return;
+ }
+ if(value==="preview"){
+  openPreview();
+  return;
+ }
  const profile=LABEL_PROFILES[value];
  if(!profile)return;
  applyLabelDimensions(profile.detected[0].width,profile.detected[0].height);
  render();
+ selector.options[0].textContent="👁 Náhľad štítku "+profile.width+" × "+profile.height+" mm";
+ selector.value="preview";
  openPreview();
 }
 function setPrinterState(connected,message){
  const previewSizeButton=$('previewSizeButton');
  if(previewSizeButton){
-  previewSizeButton.disabled=!!connected;
-  previewSizeButton.value=activeLabelProfile===LABEL_PROFILES.large?"large":"small";
-  previewSizeButton.title=connected?"Rozmer sa nastavuje automaticky podľa RFID tlačiarne.":"Vyber rozmer a otvor náhľad štítku.";
+  previewSizeButton.disabled=false;
+  previewSizeButton.options[0].textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+  previewSizeButton.value="preview";
+  previewSizeButton.title=connected?"Rozmer sa nastavuje automaticky podľa RFID; otvorí sa náhľad aktívneho profilu.":"Vyber rozmer a otvor náhľad štítku.";
  }
  const button=$('printerButton');
  button.classList.toggle('connected',connected);
@@ -1291,7 +1307,8 @@ document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date
 });
 document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.addEventListener('change',()=>{updateKmIntervalOptions();render()}));
 applyLabelDimensions(labelDimensions.width,labelDimensions.height);
-$('previewSizeButton').value=activeLabelProfile===LABEL_PROFILES.large?"large":"small";
+$('previewSizeButton').options[0].textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+$('previewSizeButton').value="preview";
 $('previewSizeButton').addEventListener('change',event=>setManualLabelSize(event.target.value));
 updateUnitLabels();
 restoreLabelFolder();
