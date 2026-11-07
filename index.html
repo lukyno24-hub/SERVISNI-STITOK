@@ -36,6 +36,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 #printerStatus #paperSizeStatus,
 #printerStatus .printer-usage{display:block;margin:0}
 #printerStatus #paperSizeStatus{font-weight:400}
+#printerStatus #paperSizeStatus strong{font-weight:700}
 #printerStatus .printer-usage{text-align:center}
 #printerStatus [hidden]{display:none!important}
 
@@ -164,7 +165,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.1</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.1.2</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -648,7 +649,7 @@ async function detectOtherPrinterInfo(){
   const height=modelId===785?totalHeight-gapHeight:totalHeight;
   if(width<10||width>100||height<10||height>200) throw new Error("Neplatné rozmery "+width+" × "+height+" mm.");
   if(!applyLabelDimensions(width,height)) throw new Error("RFID rozmer "+width+" × "+height+" mm sa nezhoduje s profilom 50 × 30 ani 50 × 90 mm.");
-  $('paperSizeStatus').textContent="Rozmer štítku: "+activeLabelProfile.name;
+  $('paperSizeStatus').innerHTML='Rozmer štítku: <strong>'+activeLabelProfile.name+'</strong>';
   $('printerMediaInfo').hidden=false;
   $('printerConnectionStatus').textContent="Pripojená: "+(printerDevice.name||"Niimbot M2");
   render();
