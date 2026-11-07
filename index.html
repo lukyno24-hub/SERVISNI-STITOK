@@ -162,6 +162,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
   </div>
   <input id="filingSearch" type="search" placeholder="Hľadať podľa stroja, mena alebo čísla">
   <div id="filingCabinetList" class="filing-cabinet-list"></div>
+  <div id="serviceReadOnlyView" class="filing-record" hidden>
+   <div class="filing-cabinet-head"><b>Servisný záznam – iba na čítanie</b><button type="button" class="light" onclick="closeServiceReadOnlyView()">Späť</button></div>
+   <div id="serviceReadOnlyContent"></div>
+  </div>
   <button type="button" class="light" onclick="changeLabelFolder()">📁 Zmeniť priečinok</button>
  </div>
 </div>
@@ -1225,47 +1229,28 @@ function changeLabelFolder(){chooseLabelFolder();}
 function openInternalServiceRecord(key,index){
  const item=readInternalRecords()[key];
  if(!item||!item.records?.[index])return;
- const selected=item.records[index];
- editingInternalService={key,index};
- $("machine").value=item.machine||"";
- $("ownerName").value=item.ownerName||"";
- $("ownerNumber").value=item.ownerNumber||"";
- records=item.records.filter((record,i)=>i!==index);
- $("date").value=selected.date||today();
- $("current").value=selected.current||"";
- document.querySelectorAll('input[name="unit"]').forEach(el=>{el.checked=el.value===selected.unit;el.dataset.wasSelected=el.checked?"true":"false";});
- document.querySelectorAll('input[name="servicePart"]').forEach(el=>el.checked=false);
- $("extraNote").value="";
- String(selected.description||"").split(" | ").forEach(part=>{
-  const pos=part.indexOf(":"); if(pos<0)return;
-  const group=part.slice(0,pos).trim(),valueText=part.slice(pos+1).trim();
-  if(group==="Poznámka"){$("extraNote").value=valueText;return;}
-  valueText.split(/,\s*/).map(v=>v.trim()).filter(Boolean).forEach(value=>{
-   const checkbox=[...document.querySelectorAll('input[name="servicePart"]')].find(el=>el.dataset.group===group&&el.value===value);
-   if(checkbox){checkbox.checked=true;const details=checkbox.closest("details");if(details)details.open=true;}
-  });
- });
- document.querySelectorAll('input[name="nextPeriod"]').forEach(el=>el.checked=false);
- if(selected.nextDate&&selected.date){
-  const from=new Date(selected.date+"T12:00:00"),to=new Date(selected.nextDate+"T12:00:00");
-  const months=(to.getFullYear()-from.getFullYear())*12+(to.getMonth()-from.getMonth());
-  const period=document.querySelector('input[name="nextPeriod"][value="'+months+'"]');
-  if(period)period.checked=true;
- }
- updateUnitLabels();
- updateKmIntervalOptions();
- if(selected.unit==="km"&&selected.current&&selected.nextKm){
-  const interval=Number(String(selected.nextKm).replace(/\s/g,""))-Number(String(selected.current).replace(/\s/g,""));
-  document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.checked=false);
-  const option=document.querySelector('input[name="kmInterval"][value="'+interval+'"]');
-  if(option)option.checked=true;
-  updateKmIntervalOptions();
-  $("nextKm").value=selected.nextKm;
- }
- $("nextKmManual").value=selected.unit==="mh"?(selected.nextKm||""):"";
- updateNextDate();
- render();closeFilingCabinet();
- $("appStatus").textContent="Otvorený servisný zásah na úpravu: "+(item.machine||"")+" · "+(selected.date?fmtDate(selected.date):"bez dátumu")+". Pri uložení sa zachová ostatná história.";
+ const record=item.records[index];
+ const hasUnit=record.unit==="km"||record.unit==="mh";
+ const unit=record.unit==="mh"?"MTH":"KM";
+ const owner=[item.ownerName,item.ownerNumber].filter(Boolean).join(" · ")||"Majiteľ nie je vyplnený";
+ const rows=[
+  ["Stroj",item.machine||"—"],
+  ["Majiteľ",owner],
+  ["Dátum servisu",record.date?fmtDate(record.date):"—"],
+  ["Aktuálny stav",hasUnit&&record.current?record.current+" "+unit:"—"],
+  ["Servisný zásah",record.description||"—"],
+  ["Nasledujúci servis",record.nextDate?fmtDate(record.nextDate):"—"],
+  ["Stav pri nasledujúcom servise",hasUnit&&record.nextKm?record.nextKm+" "+unit:"—"]
+ ];
+ $("serviceReadOnlyContent").innerHTML=rows.map(([label,value])=>'<div class="filing-service-entry"><strong>'+escapeHtml(label)+'</strong><div>'+escapeHtml(value)+'</div></div>').join("");
+ $("filingSearch").hidden=true;
+ $("filingCabinetList").hidden=true;
+ $("serviceReadOnlyView").hidden=false;
+}
+function closeServiceReadOnlyView(){
+ $("serviceReadOnlyView").hidden=true;
+ $("filingSearch").hidden=false;
+ $("filingCabinetList").hidden=false;
 }
 function renderFilingCabinet(){
  const directory=readInternalRecords();
