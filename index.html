@@ -303,7 +303,6 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div class="qr-bottom"><div id="qrcode" aria-label="QR kód kompletnej servisnej histórie"></div></div>
 </section></div>
 <div class="preview-actions">
-<button class="light" type="button" onclick="closePreview()">Zavrieť</button>
 <button class="secondary" type="button" onclick="saveLabelCopy().catch(error=>$('saveCopyStatus').textContent='Uloženie zlyhalo: '+(error?.message||String(error)))">💾 Uložiť štítok</button>
 <button class="primary" type="button" onclick="printAndSaveLabel()">🖨️ Uložiť a tlačiť štítok</button>
 </div>
