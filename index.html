@@ -52,7 +52,9 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
 .filing-service-list{display:grid;gap:7px;margin-top:8px}
 .filing-service-entry{padding:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:5px}
-.filing-service-date{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.filing-service-date{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:7px}
+.filing-service-body{border:1px solid var(--line);border-radius:7px;background:#fff;padding:8px;min-height:calc(100% - 28px)}
+.filing-service-body .filing-record-actions{margin-top:8px}
 .filing-service-printed{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#344054;margin:0}
 .filing-service-printed input{width:13px;height:13px;margin:0;accent-color:var(--green);padding:0}
 .filing-service-print-number{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:5px;background:#eef2f6;color:#344054;font-size:12px;font-weight:700}
@@ -174,7 +176,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.8</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.2.9</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1491,7 +1493,7 @@ function renderFilingCabinet(){
    const originalIndex=(item.records||[]).length-1-index;
    const printCount=Math.max(0,Number(record.printCount)||(record.printed===true?1:0));
    const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+formatPrintedCount(printCount)+'</strong></span>';
-   return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div>';
+   return '<div class="filing-service-entry"><div class="filing-service-date"><strong>'+(serviceRecords.length-index)+'. '+escapeHtml(date)+'</strong>'+printedStatus+'</div><div class="filing-service-body"><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+originalIndex+'">Vymazať</button></div></div></div>';
   }).join("")+'</div>':'<div class="small">Zatiaľ bez servisných záznamov.</div>';
   return '<div class="filing-record"><div class="filing-identity">'+owner+'</div><div class="small">'+serviceRecords.length+' servisných záznamov</div>'+serviceHtml+'<div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div>';
  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
