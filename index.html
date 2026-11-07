@@ -58,7 +58,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
 .filing-owner-frame .filing-owner-machine{font-weight:600}
 .filing-owner-frame:nth-child(even){background:#f2f4f7}
-.filing-machine-sort:nth-child(even) .filing-machine-frame{background:#f2f4f7}
+.filing-machine-sort .filing-machine-frame-alt{background:#f2f4f7}
 .filing-service-list{display:grid;gap:7px;margin-top:8px}
 .filing-service-entry{padding:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:5px}
 .filing-service-date{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:7px}
@@ -1482,7 +1482,7 @@ function renderFilingCabinet(){
   const comparison=av.localeCompare(bv,"sk",{sensitivity:"base",numeric:true});
   return comparison||String(a.machine||"").localeCompare(String(b.machine||""),"sk",{sensitivity:"base",numeric:true});
  });
- const renderMachineDetails=(item,includeIdentity)=> {
+ const renderMachineDetails=(item,includeIdentity,machineIndex=0)=> {
   const serviceRecords=(item.records||[]).slice().reverse();
   const serviceHtml=serviceRecords.length?'<div class="filing-service-list">'+serviceRecords.map((record,index)=>{
    const hasUnit=record.unit==="km"||record.unit==="mh";
@@ -1509,7 +1509,7 @@ function renderFilingCabinet(){
    '<div class="filing-identity-'+field+'">'+escapeHtml(value)+'</div>'
   ).join("")||'<div>Majiteľ nie je vyplnený</div>';
   if(sortField==="machine"){
-   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-machine-frame"><div>'+[
+   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-machine-frame'+(machineIndex%2===1?' filing-machine-frame-alt':'')+'"><div>'+[
     item.ownerName?'<div class="filing-identity-ownerName">'+escapeHtml(item.ownerName)+'</div>':'',
     item.ownerNumber?'<div class="filing-identity-ownerNumber">'+escapeHtml(item.ownerNumber)+'</div>':''
    ].filter(Boolean).join("")+'</div>'+count+serviceHtml+machineActionButtons+'</div></div>';
@@ -1531,7 +1531,7 @@ function renderFilingCabinet(){
    return '<div class="filing-record"><div class="filing-owner-heading">'+escapeHtml(heading)+'</div>'+group.items.map(item=>renderMachineDetails(item,true)).join("")+'</div>';
   }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }else{
-  $("filingCabinetList").innerHTML=entries.length?entries.map(item=>renderMachineDetails(item,true)).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
+  $("filingCabinetList").innerHTML=entries.length?entries.map((item,index)=>renderMachineDetails(item,true,index)).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }
  $("filingCabinetList").querySelectorAll("[data-delete-service]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.deleteService;
