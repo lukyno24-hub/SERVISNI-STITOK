@@ -1532,9 +1532,11 @@ function printAndSaveLabel(){
 function updatePreviewActionMode(){
  const saveButton=$("previewSaveButton");
  const printButton=$("previewPrintButton");
+ const saveCopyStatus=$("saveCopyStatus");
  if(!saveButton||!printButton)return;
  saveButton.hidden=!!viewingInternalService;
  printButton.textContent=viewingInternalService?"🖨️ Tlačiť":"🖨️ Uložiť a tlačiť štítok";
+ if(saveCopyStatus)saveCopyStatus.hidden=!!viewingInternalService;
 }
 function handlePreviewPrint(){
  if(viewingInternalService){
