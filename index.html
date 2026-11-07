@@ -188,7 +188,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.3.7</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.3.8</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1518,10 +1518,7 @@ function renderFilingCabinet(){
    ].filter(Boolean).join("")+'</div>'+count+serviceHtml+machineActionButtons+'</div></div>';
   }
   if(sortField==="ownerNumber"){
-   return '<div class="filing-record filing-number-sort"><div class="filing-number-heading">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div><div class="filing-number-frame'+(machineIndex%2===1?' filing-number-frame-alt':'')+'"><div>'+[
-    item.machine?'<div class="filing-identity-machine">'+escapeHtml(item.machine)+'</div>':'',
-    item.ownerName?'<div class="filing-identity-ownerName">'+escapeHtml(item.ownerName)+'</div>':''
-   ].filter(Boolean).join("")+'</div>'+count+serviceHtml+machineActionButtons+'</div></div>';
+   return '<div class="filing-number-frame'+(machineIndex%2===1?' filing-number-frame-alt':'')+'"><div class="filing-identity-machine">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-identity-ownerName">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
   }
   return '<div class="filing-record"><div class="filing-identity">'+owner+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
  };
@@ -1538,6 +1535,20 @@ function renderFilingCabinet(){
   $("filingCabinetList").innerHTML=grouped.length?grouped.map(group=>{
    const heading=group.name||"Meno nie je vyplnené";
    return '<div class="filing-record"><div class="filing-owner-heading">'+escapeHtml(heading)+'</div>'+group.items.map(item=>renderMachineDetails(item,true)).join("")+'</div>';
+  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
+ }else if(sortField==="ownerNumber"){
+  const groups=new Map();
+  entries.forEach(item=>{
+   const normalized=String(item.ownerNumber||"").trim().split(" ").filter(Boolean).join(" ").toLocaleLowerCase("sk-SK");
+   const groupKey=normalized?"number:"+normalized:"machine:"+item.key;
+   if(!groups.has(groupKey))groups.set(groupKey,{number:String(item.ownerNumber||"").trim(),items:[]});
+   groups.get(groupKey).items.push(item);
+  });
+  const grouped=[...groups.values()].sort((a,b)=>a.number.localeCompare(b.number,"sk",{sensitivity:"base",numeric:true}));
+  grouped.forEach(group=>group.items.sort((a,b)=>String(a.machine||"").localeCompare(String(b.machine||""),"sk",{sensitivity:"base",numeric:true})));
+  $("filingCabinetList").innerHTML=grouped.length?grouped.map(group=>{
+   const heading=group.number||"Číslo nie je vyplnené";
+   return '<div class="filing-record"><div class="filing-number-heading">'+escapeHtml(heading)+'</div>'+group.items.map((item,index)=>renderMachineDetails(item,true,index)).join("")+'</div>';
   }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }else{
   $("filingCabinetList").innerHTML=entries.length?entries.map((item,index)=>renderMachineDetails(item,true,index)).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
