@@ -192,7 +192,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.2</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.3</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1028,7 +1028,10 @@ function parsePayload(raw){
 }
 const OWNER_STORAGE_KEY="servisnyAsistentOwners_v1";
 function ownerMachineKey(value){
- return String(value||"").trim().toLocaleLowerCase("sk-SK").replace(/\\s+/g," ");
+ return String(value||"").trim().replace(/\s+/g," ").toLocaleLowerCase("sk-SK");
+}
+function ownerIdentityKey(machine,name,number){
+ return "identity:"+[machine,name,number].map(value=>encodeURIComponent(ownerMachineKey(value))).join("|");
 }
 function readOwnerDirectory(){
  try{return JSON.parse(localStorage.getItem(OWNER_STORAGE_KEY)||"{}")||{};}
@@ -1036,10 +1039,15 @@ function readOwnerDirectory(){
 }
 function loadOwnerForMachine(){
  const key=ownerMachineKey($("machine").value);
- const directory=readOwnerDirectory();
- const owner=key?directory[key]:null;
- $("ownerName").value=owner?.name||"";
- $("ownerNumber").value=owner?.number||"";
+ const matches=getMachineDirectoryEntries().filter(item=>ownerMachineKey(item.machine)===key);
+ if(matches.length===1){
+  $("ownerName").value=matches[0].name;
+  $("ownerNumber").value=matches[0].number;
+ }else{
+  $("ownerName").value="";
+  $("ownerNumber").value="";
+  if(matches.length>1)$("ownerMatchStatus").textContent="Pre toto označenie stroja existuje viac kariet. Vyber správne meno a číslo.";
+ }
 }
 let autoFilledMachineKey="";
 let editingInternalService=null;
@@ -1224,12 +1232,31 @@ function readInternalRecords(){
 }
 function saveInternalMachineRecord(extraRecord=null){
  const machineName=$("machine").value.trim();
- const key=ownerMachineKey(machineName);
- if(!key){
+ const machineKey=ownerMachineKey(machineName);
+ const ownerName=$("ownerName").value.trim();
+ const ownerNumber=$("ownerNumber").value.trim();
+ if(!machineKey){
   $("saveCopyStatus").textContent="Najprv vyplň označenie stroja, aby sa záznam dal priradiť v kartotéke.";
   return false;
  }
  const directory=readInternalRecords();
+ const owners=readOwnerDirectory();
+ const nameKey=ownerMachineKey(ownerName);
+ const numberKey=ownerMachineKey(ownerNumber);
+ const matchesIdentity=storedKey=>{
+  const item=directory[storedKey]||{};
+  const owner=owners[storedKey]||{};
+  return ownerMachineKey(item.machine||storedKey)===machineKey
+   &&ownerMachineKey(item.ownerName||owner.name||"")===nameKey
+   &&ownerMachineKey(item.ownerNumber||owner.number||"")===numberKey;
+ };
+ let key=Object.keys(directory).find(matchesIdentity);
+ if(!key){
+  key=!directory[machineKey]?machineKey:ownerIdentityKey(machineName,ownerName,ownerNumber);
+  const baseKey=key;
+  let suffix=2;
+  while(directory[key]&&!matchesIdentity(key))key=baseKey+"#"+suffix++;
+ }
  const existing=directory[key]||{};
  let internalRecords=Array.isArray(existing.records)?[...existing.records]:[];
  const currentRecords=Array.isArray(records)?records:[];
@@ -1259,8 +1286,6 @@ function saveInternalMachineRecord(extraRecord=null){
    };
   }
  }
- const ownerName=$("ownerName").value.trim();
- const ownerNumber=$("ownerNumber").value.trim();
  directory[key]={
   ...existing,
   machine:machineName,
@@ -1554,8 +1579,9 @@ function renderFilingCabinet(){
  }else{
   const groups=new Map();
   entries.forEach(item=>{
-   const normalized=String(item.machine||"").trim().split(" ").filter(Boolean).join(" ").toLocaleLowerCase("sk-SK");
-   const groupKey=normalized?"machine:"+normalized:"machine:"+item.key;
+   const normalized=ownerMachineKey(item.machine);
+   const identity=[normalized,ownerMachineKey(item.ownerName),ownerMachineKey(item.ownerNumber)].join("|");
+   const groupKey=normalized?"machine:"+identity:"machine:"+item.key;
    if(!groups.has(groupKey))groups.set(groupKey,{machine:String(item.machine||"").trim(),items:[]});
    groups.get(groupKey).items.push(item);
   });
@@ -1895,15 +1921,28 @@ $('machine').addEventListener('input',()=>{
 });
 $('machine').addEventListener('change',()=>{
  const key=ownerMachineKey($('machine').value);
- const match=getMachineDirectoryEntries().find(item=>ownerMachineKey(item.machine)===key);
- if(match){
-  // Po výbere konkrétneho stroja načítame celý priradený profil.
-  $('machine').value=match.machine;
-  $('ownerName').value=match.name;
-  $('ownerNumber').value=match.number;
-  autoFilledMachineKey=match.key;
-  $('machineMatchStatus').textContent="Načítaná zhoda v kartotéke: "+match.machine;
+ const matches=getMachineDirectoryEntries().filter(item=>ownerMachineKey(item.machine)===key);
+ if(matches.length===1){
+  $('machine').value=matches[0].machine;
+  $('ownerName').value=matches[0].name;
+  $('ownerNumber').value=matches[0].number;
+  autoFilledMachineKey=matches[0].key;
+  $('machineMatchStatus').textContent="Načítaná zhoda v kartotéke: "+matches[0].machine;
   $('ownerMatchStatus').textContent="Načítané meno a číslo priradené k tomuto stroju.";
+ }else if(matches.length>1){
+  const nameKey=ownerMachineKey($('ownerName').value);
+  const numberKey=ownerMachineKey($('ownerNumber').value);
+  const exact=matches.filter(item=>ownerMachineKey(item.name)===nameKey&&ownerMachineKey(item.number)===numberKey);
+  if(exact.length===1){
+   $('machine').value=exact[0].machine;
+   $('ownerName').value=exact[0].name;
+   $('ownerNumber').value=exact[0].number;
+   autoFilledMachineKey=exact[0].key;
+   $('ownerMatchStatus').textContent="Načítaná presná kombinácia stroja, mena a čísla.";
+  }else{
+   $('machineMatchStatus').textContent="Toto označenie stroja má viac kariet. Zadaj alebo vyber správne meno a číslo.";
+   $('ownerMatchStatus').textContent="Do existujúcej karty sa záznam priradí iba pri zhode všetkých troch údajov.";
+  }
  }else{
   $('machineMatchStatus').textContent="Nový stroj – bez presnej zhody v kartotéke.";
  }
