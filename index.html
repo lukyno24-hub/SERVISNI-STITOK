@@ -201,7 +201,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.2</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.3</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -322,6 +322,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </div>
 <div id="nextKmManualField" hidden><label for="nextKmManual" id="nextLabel">Stav pri ďalšej výmene (MTH)</label><input id="nextKmManual" inputmode="numeric" placeholder="3920"></div>
 </div>
+<div class="actions" style="margin-top:14px">
+ <button id="homeSaveButton" class="secondary full" type="button" onclick="saveLabelCopy().then(()=>{ $('homeSaveStatus').textContent=$('saveCopyStatus').textContent; }).catch(error=>{ $('homeSaveStatus').textContent='Uloženie zlyhalo: '+(error?.message||String(error)); })">💾 Uložiť štítok</button>
+</div>
+<div id="homeSaveStatus" class="status" role="status"></div>
 </section>
 
 <section class="panel">
