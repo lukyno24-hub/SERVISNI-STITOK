@@ -201,7 +201,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.1</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.2</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -336,11 +336,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <section class="panel">
 <h2>3. Náhľad a tlač štítku</h2>
 <div class="actions">
-<div class="label-size-choices full" role="group" aria-label="Výber rozmeru štítku">
- <button type="button" id="labelSizeSmall" class="label-size-choice" aria-pressed="false">50 × 30 mm<small>Malý štítok</small></button>
- <button type="button" id="labelSizeLarge" class="label-size-choice" aria-pressed="false">50 × 90 mm<small>Veľký štítok</small></button>
+<div class="label-size-choices full" role="group" aria-label="Vyber rozmer a otvor náhľad štítku">
+ <button type="button" id="labelSizeSmall" class="label-size-choice" aria-pressed="false">👁 Náhľad štítku<small>50 × 30 mm</small></button>
+ <button type="button" id="labelSizeLarge" class="label-size-choice" aria-pressed="false">👁 Náhľad štítku<small>50 × 90 mm</small></button>
 </div>
-<button id="previewSizeButton" type="button" class="preview-launch full" onclick="openPreview()">👁 Náhľad štítku 30 × 50 mm</button>
 <button id="clearFormButton" class="light" onclick="clearForm()">Vyčistiť formulár</button>
 </div>
 <div id="appStatus" class="status"></div>
@@ -534,31 +533,38 @@ function printerPacket(cmd,data=[]){
  return new Uint8Array(packet);
 }
 function updateLabelSizeChoices(){
- const connected=!!printerDevice?.gatt?.connected;
  const current=activeLabelProfile===LABEL_PROFILES.large?"large":"small";
  const small=$("labelSizeSmall"),large=$("labelSizeLarge");
  if(small){
   small.classList.toggle("selected",current==="small");
   small.setAttribute("aria-pressed",current==="small"?"true":"false");
-  small.disabled=connected||viewingInternalService;
-  small.title=connected?"Rozmer je určený RFID štítkom v tlačiarni.":"Vybrať malý štítok 50 × 30 mm.";
+  small.disabled=false;
+  small.title=current==="small"?"Klikni znova pre otvorenie náhľadu.":"Vybrať rozmer 50 × 30 mm.";
  }
  if(large){
   large.classList.toggle("selected",current==="large");
   large.setAttribute("aria-pressed",current==="large"?"true":"false");
-  large.disabled=connected||viewingInternalService;
-  large.title=connected?"Rozmer je určený RFID štítkom v tlačiarni.":"Vybrať veľký štítok 50 × 90 mm.";
+  large.disabled=false;
+  large.title=current==="large"?"Klikni znova pre otvorenie náhľadu.":"Vybrať rozmer 50 × 90 mm.";
  }
 }
 function setManualLabelSize(value){
- if(viewingInternalService)return;
+ const profile=LABEL_PROFILES[value];
+ if(!profile)return;
+ const isSelected=activeLabelProfile===profile;
+ if(isSelected){
+  openPreview();
+  return;
+ }
+ if(viewingInternalService){
+  $("paperSizeStatus").textContent="Pri prezeraní uloženého záznamu nie je možné meniť rozmer štítku.";
+  return;
+ }
  if(printerDevice?.gatt?.connected){
   $("paperSizeStatus").textContent="Rozmer štítku sa nastavuje automaticky podľa RFID v tlačiarni.";
   updateLabelSizeChoices();
   return;
  }
- const profile=LABEL_PROFILES[value];
- if(!profile)return;
  if(!applyLabelDimensions(profile.detected[0].width,profile.detected[0].height))return;
  render();
  updateLabelSizeChoices();
@@ -1983,7 +1989,7 @@ document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date
 });
 document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.addEventListener('change',()=>{updateKmIntervalOptions();render()}));
 applyLabelDimensions(labelDimensions.width,labelDimensions.height);
-$('previewSizeButton').textContent="👁 Náhľad štítku "+activeLabelProfile.width+" × "+activeLabelProfile.height+" mm";
+$('previewSizeButton').remove();
 $('labelSizeSmall').addEventListener('click',()=>setManualLabelSize("small"));
 $('labelSizeLarge').addEventListener('click',()=>setManualLabelSize("large"));
 updateLabelSizeChoices();
