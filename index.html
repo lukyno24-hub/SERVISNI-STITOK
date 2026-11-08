@@ -1989,7 +1989,7 @@ document.querySelectorAll('input[name="servicePart"],#fluidType,#extraNote,#date
 });
 document.querySelectorAll('input[name="kmInterval"]').forEach(el=>el.addEventListener('change',()=>{updateKmIntervalOptions();render()}));
 applyLabelDimensions(labelDimensions.width,labelDimensions.height);
-$('previewSizeButton').remove();
+
 $('labelSizeSmall').addEventListener('click',()=>setManualLabelSize("small"));
 $('labelSizeLarge').addEventListener('click',()=>setManualLabelSize("large"));
 updateLabelSizeChoices();
