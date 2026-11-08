@@ -209,7 +209,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.8</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.9</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -225,7 +225,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </div>
 <div class="label-storage">
  <b>Ukladanie vytlačených štítkov</b>
- <button id="folderButton" class="light" type="button" onclick="folderButtonAction()">📁 Vybrať priečinok na ukladanie</button>
+ <button id="folderButton" class="light" type="button" onclick="folderButtonAction()">📁 Vybrať a nastaviť priečinok</button>
  <div id="folderStatus" class="status"></div>
  <div id="filingCabinet" class="filing-cabinet" hidden>
   <div class="filing-cabinet-head">
@@ -1273,7 +1273,12 @@ async function restoreLabelFolder(){
    $('folderButton').title="Otvoriť internú kartotéku.";
   }
  }catch(e){
-  $('folderStatus').textContent="Prehliadač nepodporuje zapamätanie priečinka. Súbory sa môžu ukladať medzi stiahnuté súbory.";
+  $('folderStatus').textContent="Uložený priečinok sa nepodarilo obnoviť. Vyber ho znova tlačidlom „Vybrať a nastaviť priečinok“.";
+ }
+ if(!labelFolderHandle){
+  $('folderButton').textContent="📁 Vybrať a nastaviť priečinok";
+  $('folderButton').title="Prvé kliknutie otvorí výber priečinka a následne povolenie na ukladanie PNG štítkov.";
+  if(!$('folderStatus').textContent.trim())$('folderStatus').textContent="Priečinok zatiaľ nie je vybraný. Klikni na tlačidlo a vyber priečinok, do ktorého sa budú ukladať štítky.";
  }
 }
 const INTERNAL_RECORDS_KEY="servisnyAsistentInternalRecords_v1";
