@@ -940,7 +940,7 @@
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
         const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-        if (px[i + 3] > 32 && lum < 128) buf[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
+        if (px[i + 3] > 32 && lum < 178) buf[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
       }
     }
     return { buf, stride };
