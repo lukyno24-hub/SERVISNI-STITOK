@@ -209,7 +209,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.7</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.8</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1265,8 +1265,12 @@ async function restoreLabelFolder(){
   db.close();
   if(handle){
    labelFolderHandle=handle;
-   $('folderStatus').textContent="Vybraný priečinok: "+handle.name+". Tlačidlo Kartotéka je pripravené.";
+   const permission=await handle.queryPermission({mode:"readwrite"});
+   $('folderStatus').textContent=permission==="granted"
+    ?"Vybraný priečinok: "+handle.name+". PNG štítky sa budú ukladať sem."
+    :"Priečinok "+handle.name+" je zapamätaný, ale prehliadač ešte potrebuje povolenie. Pri ukladaní potvrď prístup; prípadne použi Zmeniť priečinok.";
    $('folderButton').textContent="📚 Kartotéka";
+   $('folderButton').title="Otvoriť internú kartotéku.";
   }
  }catch(e){
   $('folderStatus').textContent="Prehliadač nepodporuje zapamätanie priečinka. Súbory sa môžu ukladať medzi stiahnuté súbory.";
@@ -1738,20 +1742,31 @@ function renderFilingCabinet(){
  }));
 }
 async function chooseLabelFolder(){
- if(!window.showDirectoryPicker){
-  $('folderStatus').textContent="Tento prehliadač neponúka priamy výber priečinka. Nastav v Chrome ukladanie sťahovaných súborov na SD kartu; PNG kópie sa stiahnu do zvoleného umiestnenia.";
+ if(!window.isSecureContext){
+  $('folderStatus').textContent="Výber priečinka je povolený iba cez zabezpečenú adresu HTTPS. Otvor aplikáciu cez https://lukyno24-hub.github.io/SERVISNI-STITOK/. Zatiaľ sa PNG štítky ukladajú medzi stiahnuté súbory.";
+  return;
+ }
+ if(typeof window.showDirectoryPicker!=="function"){
+  $('folderStatus').textContent="Tento prehliadač nepodporuje výber priečinka na priame ukladanie. Otvor aplikáciu v aktuálnom Chrome alebo Microsoft Edge na počítači. Dovtedy sa PNG štítky ukladajú do priečinka Stiahnuté súbory.";
   return;
  }
  try{
+  $('folderStatus').textContent="Vyber priečinok, do ktorého sa budú ukladať PNG štítky…";
   const handle=await window.showDirectoryPicker({id:"servisne-stitky",mode:"readwrite"});
-  const permission=await handle.requestPermission({mode:"readwrite"});
-  if(permission!=="granted") throw new Error("Prehliadač nepovolil zápis do priečinka.");
-  labelFolderHandle=handle;
+  let permission=await handle.queryPermission({mode:"readwrite"});
+  if(permission!=="granted")permission=await handle.requestPermission({mode:"readwrite"});
+  if(permission!=="granted")throw new Error("Prehliadač nepovolil zápis. Skús vybrať priečinok znova a potvrdiť povolenie.");
   await storeLabelFolder(handle);
+  labelFolderHandle=handle;
   $('folderButton').textContent="📚 Kartotéka";
-  $('folderStatus').textContent="Priečinok je nastavený: "+handle.name+". Kópie štítkov sa ukladajú ako PNG; kliknutím na Kartotéka otvoríš interné záznamy.";
+  $('folderButton').title="Otvoriť internú kartotéku. Priečinok môžeš zmeniť tlačidlom nižšie.";
+  $('folderStatus').textContent="Priečinok je nastavený: "+handle.name+". PNG štítky sa budú ukladať priamo sem. Na tomto počítači si ho už nemusíš vyberať znova.";
  }catch(e){
-  if(e.name!=="AbortError") $('folderStatus').textContent="Priečinok sa nepodarilo nastaviť: "+(e.message||String(e));
+  if(e.name==="AbortError"){
+   $('folderStatus').textContent="Výber priečinka bol zrušený. PNG štítky sa budú ukladať medzi stiahnuté súbory.";
+  }else{
+   $('folderStatus').textContent="Priečinok sa nepodarilo nastaviť: "+(e.message||String(e))+". Skús Chrome alebo Microsoft Edge a povoľ prístup k priečinku.";
+  }
  }
 }
 function makeLabelFileName(){
