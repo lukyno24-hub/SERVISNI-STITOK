@@ -209,7 +209,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.9</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.0</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -227,6 +227,8 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
  <b>Ukladanie vytlačených štítkov</b>
  <button id="folderButton" class="light" type="button" onclick="folderButtonAction()">📁 Vybrať a nastaviť priečinok</button>
  <div id="folderStatus" class="status"></div>
+ <button id="sharedConnectButton" class="secondary full" type="button" onclick="connectSharedStorage()">🔗 Pripojiť spoločnú kartotéku</button>
+ <div id="sharedStatus" class="status" role="status">Spoločná kartotéka zatiaľ nie je pripojená. Na pripojenie musí byť hlavný počítač zapnutý.</div>
  <div id="filingCabinet" class="filing-cabinet" hidden>
   <div class="filing-cabinet-head">
    <b>Interná kartotéka strojov a majiteľov</b>
@@ -1282,6 +1284,116 @@ async function restoreLabelFolder(){
  }
 }
 const INTERNAL_RECORDS_KEY="servisnyAsistentInternalRecords_v1";
+
+/* Spoločná kartotéka v domácej sieti – API beží na hlavnom PC Windows 10. */
+const SHARED_API_BASE="http://192.168.88.242:8765";
+let sharedStorageConnected=false;
+let sharedStorageRevision=0;
+let sharedStorageApply=false;
+let sharedStoragePushTimer=null;
+let sharedStoragePollTimer=null;
+const nativeLocalStorageSetItem=Storage.prototype.setItem;
+
+function getLocalSharedState(){
+ const parse=(key)=>{
+  try{return JSON.parse(localStorage.getItem(key)||"{}")||{};}
+  catch(e){return {};}
+ };
+ return {records:parse(INTERNAL_RECORDS_KEY),owners:parse(OWNER_STORAGE_KEY)};
+}
+function applyRemoteSharedState(state){
+ sharedStorageApply=true;
+ try{
+  nativeLocalStorageSetItem.call(localStorage,INTERNAL_RECORDS_KEY,JSON.stringify(state.records||{}));
+  nativeLocalStorageSetItem.call(localStorage,OWNER_STORAGE_KEY,JSON.stringify(state.owners||{}));
+ }finally{sharedStorageApply=false;}
+ if(!$("filingCabinet").hidden)renderFilingCabinet();
+}
+async function sharedApiFetch(path,options={}){
+ const response=await fetch(SHARED_API_BASE+path,{
+  mode:"cors",
+  targetAddressSpace:"local",
+  ...options
+ });
+ if(!response.ok)throw new Error("Server odpovedal stavom "+response.status+".");
+ return response;
+}
+async function pushSharedState(){
+ if(!sharedStorageConnected)return;
+ const response=await sharedApiFetch("/api/state",{
+  method:"PUT",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify(getLocalSharedState())
+ });
+ const state=await response.json();
+ sharedStorageRevision=Number(state.revision)||sharedStorageRevision;
+ $("sharedStatus").textContent="Spoločná kartotéka je pripojená. Zmeny sa ukladajú na hlavný počítač.";
+}
+function scheduleSharedStatePush(){
+ if(!sharedStorageConnected||sharedStorageApply)return;
+ if(sharedStoragePushTimer)clearTimeout(sharedStoragePushTimer);
+ sharedStoragePushTimer=setTimeout(async()=>{
+  sharedStoragePushTimer=null;
+  try{await pushSharedState();}
+  catch(error){$("sharedStatus").textContent="Nepodarilo sa synchronizovať kartotéku: "+(error.message||String(error));}
+ },450);
+}
+Storage.prototype.setItem=function(key,value){
+ nativeLocalStorageSetItem.call(this,key,value);
+ if(this===localStorage&&(key===INTERNAL_RECORDS_KEY||key===OWNER_STORAGE_KEY))scheduleSharedStatePush();
+};
+async function pollSharedStorage(){
+ if(!sharedStorageConnected||sharedStoragePushTimer)return;
+ try{
+  const response=await sharedApiFetch("/api/state");
+  const state=await response.json();
+  const revision=Number(state.revision)||0;
+  if(revision>sharedStorageRevision){
+   applyRemoteSharedState(state);
+   sharedStorageRevision=revision;
+   $("sharedStatus").textContent="Kartotéka bola aktualizovaná z iného zariadenia.";
+  }
+ }catch(error){
+  $("sharedStatus").textContent="Hlavný počítač je dočasne nedostupný. Lokálne údaje zostali zachované.";
+ }
+}
+async function connectSharedStorage(){
+ const button=$("sharedConnectButton");
+ button.disabled=true;
+ button.textContent="Pripájam…";
+ $("sharedStatus").textContent="Žiadam o prístup k hlavnej domácej sieti…";
+ try{
+  const healthResponse=await sharedApiFetch("/api/health");
+  const health=await healthResponse.json();
+  if(!health.ok)throw new Error("Služba na hlavnom počítači ešte nie je pripravená.");
+  const stateResponse=await sharedApiFetch("/api/state");
+  const remote=await stateResponse.json();
+  const local=getLocalSharedState();
+  const hasLocal=Object.keys(local.records).length>0||Object.keys(local.owners).length>0;
+  if((Number(remote.revision)||0)===0&&hasLocal){
+   const saved=await sharedApiFetch("/api/state",{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(local)
+   });
+   const result=await saved.json();
+   sharedStorageRevision=Number(result.revision)||1;
+  }else{
+   applyRemoteSharedState(remote);
+   sharedStorageRevision=Number(remote.revision)||0;
+  }
+  sharedStorageConnected=true;
+  button.textContent="✅ Spoločná kartotéka pripojená";
+  button.title="Kartotéka sa synchronizuje s hlavným počítačom 192.168.88.242.";
+  $("sharedStatus").textContent="Pripojené k hlavnému PC. Mená, čísla, stroje a servisná história sa ukladajú spoločne.";
+  if(sharedStoragePollTimer)clearInterval(sharedStoragePollTimer);
+  sharedStoragePollTimer=setInterval(pollSharedStorage,5000);
+ }catch(error){
+  button.disabled=false;
+  button.textContent="🔗 Pripojiť spoločnú kartotéku";
+  $("sharedStatus").textContent="Pripojenie zlyhalo: "+(error.message||String(error))+". Skontroluj, či hlavný PC beží, služba je spustená a Chrome povolil prístup k lokálnej sieti.";
+ }
+}
 function readInternalRecords(){
  try{return JSON.parse(localStorage.getItem(INTERNAL_RECORDS_KEY)||"{}")||{};}
  catch(e){return {};}
@@ -1793,6 +1905,20 @@ async function createLabelPngBlob(){
  }
 }
 async function writeLabelBlob(blob,fileName){
+ if(sharedStorageConnected){
+  try{
+   const response=await sharedApiFetch("/api/files?name="+encodeURIComponent(fileName),{
+    method:"POST",
+    headers:{"Content-Type":"application/octet-stream"},
+    body:blob
+   });
+   const result=await response.json();
+   $("folderStatus").textContent="PNG štítok uložený na hlavnom počítači: "+result.fileName;
+   return "shared";
+  }catch(error){
+   $("folderStatus").textContent="Sieťové uloženie PNG zlyhalo. Skúsim miestny priečinok alebo stiahnutie.";
+  }
+ }
  if(labelFolderHandle){
   try{
    let permission=await labelFolderHandle.queryPermission({mode:"readwrite"});
