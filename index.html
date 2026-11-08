@@ -53,26 +53,18 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-record.filing-machine-sort{border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff}
 .filing-machine-sort .filing-machine-heading{font-size:14px;font-weight:700;margin:0 0 7px;color:#1f2937}
 .filing-number-sort .filing-number-heading{font-size:14px;font-weight:700;margin:0 0 7px;color:#1f2937}
-.filing-number-frame{border-left:3px solid #facc15;padding:8px 9px;border-radius:5px;background:#f2f4f7}
-.filing-number-frame-alt{background:#fff}
 /* Hrubšia žltá deliaca čiara bez medzery medzi susediacimi rámikmi. */
-.filing-owner-frame+.filing-owner-frame,
-.filing-number-frame+.filing-number-frame{border-top:3px solid #facc15;margin-top:0}
+/* Rovnaké žlté spoje vo všetkých troch spôsoboch zobrazenia. */
+.filing-owner-frame+.filing-owner-frame{border-top:3px solid #facc15;margin-top:0}
+.filing-owner-frame:has(+ .filing-owner-frame){border-bottom:3px solid #facc15}
 .filing-record.filing-machine-sort+.filing-record.filing-machine-sort .filing-owner-frame{border-top:3px solid #facc15;margin-top:0}
-/* Žlté horné aj spodné hrany pri spoji rámikov v každom režime. */
-.filing-owner-frame:has(+ .filing-owner-frame),
-.filing-number-frame:has(+ .filing-number-frame),
 .filing-record.filing-machine-sort:has(+ .filing-record.filing-machine-sort) .filing-owner-frame{border-bottom:3px solid #facc15}
 
-.filing-machine-sort .filing-machine-frame{border:1px solid var(--line);border-left:3px solid #facc15;padding:8px 9px;border-radius:5px;background:#f2f4f7}
-.filing-record.filing-machine-sort+.filing-record.filing-machine-sort .filing-machine-frame{border-top:3px solid #facc15;margin-top:0}
-.filing-record.filing-machine-sort:has(+ .filing-record.filing-machine-sort) .filing-machine-frame{border-bottom:3px solid #facc15}
 .filing-owner-heading{font-size:14px;font-weight:700;margin:0 0 7px;color:#1f2937}
 .filing-owner-frame{border:1px solid var(--line);border-left:3px solid #facc15;border-radius:8px;padding:9px;background:#f2f4f7}
 .filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
 .filing-owner-frame .filing-owner-machine{font-weight:600}
-.filing-owner-frame:nth-child(even){background:#f2f4f7}
-.filing-machine-sort .filing-machine-frame-alt{background:#fff}
+.filing-owner-frame-alt{background:#fff}
 .filing-service-list{display:grid;gap:7px;margin-top:8px}
 .filing-service-entry{padding:8px;border:1px solid var(--line);border-left:3px solid var(--blue);background:#fff;border-radius:5px}
 .filing-service-date{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:7px}
@@ -199,7 +191,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.4.8</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.4.9</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1523,10 +1515,10 @@ function renderFilingCabinet(){
    '<div class="filing-identity-'+field+'">'+escapeHtml(value)+'</div>'
   ).join("")||'<div>Majiteľ nie je vyplnený</div>';
   if(sortField==="machine"){
-   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-frame'+(machineIndex%2===1?' filing-machine-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div></div>';
+   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-frame'+(machineIndex%2===1?' filing-owner-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div></div>';
   }
   if(sortField==="ownerNumber"){
-   return '<div class="filing-number-frame'+(machineIndex%2===1?' filing-number-frame-alt':'')+'"><div class="filing-identity-machine">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-identity-ownerName">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
+   return '<div class="filing-owner-frame'+(machineIndex%2===1?' filing-owner-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
   }
   return '<div class="filing-record"><div class="filing-identity">'+owner+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
  };
@@ -1542,7 +1534,7 @@ function renderFilingCabinet(){
   grouped.forEach(group=>group.items.sort((a,b)=>String(a.machine||"").localeCompare(String(b.machine||""),"sk",{sensitivity:"base",numeric:true})));
   $("filingCabinetList").innerHTML=grouped.length?grouped.map(group=>{
    const heading=group.name||"Meno nie je vyplnené";
-   return '<div class="filing-record"><div class="filing-owner-heading">'+escapeHtml(heading)+'</div>'+group.items.map(item=>renderMachineDetails(item,true)).join("")+'</div>';
+   return '<div class="filing-record"><div class="filing-owner-heading">'+escapeHtml(heading)+'</div>'+group.items.map((item,index)=>renderMachineDetails(item,true,index)).join("")+'</div>';
   }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }else if(sortField==="ownerNumber"){
   const groups=new Map();
