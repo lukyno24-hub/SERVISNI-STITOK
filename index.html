@@ -1681,6 +1681,7 @@ function renderFilingCabinet(){
   const key=button.dataset.openMachine;
   const item=readInternalRecords()[key];
   if(!item)return;
+  setInternalFormReadOnly(false);
   editingMachineKey=key;
   editingInternalService=null;
   viewingInternalService=false;
