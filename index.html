@@ -46,7 +46,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-cabinet{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:9px;background:#f8fafc;text-align:left}
 .filing-cabinet-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
 .filing-cabinet-list{display:grid;gap:8px;margin:10px 0}
-.filing-record-actions{display:flex;gap:8px;margin-top:8px;padding:7px;border:1px solid var(--line);border-radius:7px;background:#fff}.filing-record-actions button{flex:1;font-size:13px;padding:10px 8px;white-space:normal}
+.filing-record-actions{display:flex;gap:8px;margin-top:8px;padding:0;border:0;border-radius:0;background:transparent}.filing-record-actions button{flex:1;font-size:13px;padding:10px 8px;white-space:normal;border:1px solid var(--line);border-radius:8px}.filing-record-actions button.light{background:#fff}
 .form-read-only input:disabled,.form-read-only select:disabled,.form-read-only textarea:disabled{opacity:1;color:#344054;background:#f1f3f5;cursor:default}
 .form-read-only details[data-read-only] summary{pointer-events:none;cursor:default}
 .filing-record{padding:10px;border:1px solid var(--line);border-radius:8px;background:white}
@@ -196,7 +196,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.9</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.0</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
