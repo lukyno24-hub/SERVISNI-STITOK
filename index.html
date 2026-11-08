@@ -66,11 +66,11 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-owner-frame{border:1px solid var(--line);border-left:3px solid #facc15;border-radius:8px;padding:9px;background:#f2f4f7}
 /* Dátumové zobrazenie používa rovnaké žlté a modré rámiky ako kartotéka podľa mena. */
 .filing-date-entry{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#f2f4f7}
-.filing-date-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 4px;border:0;border-radius:0;background:transparent;font-weight:700}
+.filing-date-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;border:0;border-radius:7px;background:#fff;font-weight:700}
 .filing-date-owner{padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#dfe3e8;color:#1f2937;font-size:13px}
 .filing-date-machine{padding:9px;border:1px solid var(--line);border-left:3px solid #facc15;border-radius:7px;background:#fff}
 .filing-date-machine-name{font-size:13px;font-weight:700;margin-bottom:7px}
-.filing-date-machine .filing-service-entry{margin-top:7px}
+.filing-date-machine .filing-service-entry{margin-top:7px;background:#f2f4f7}.filing-date-machine .filing-service-entry .filing-service-body{background:#f2f4f7}
 .filing-date-machine .filing-record-actions{margin-top:8px}
 .filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
 .filing-owner-frame .filing-owner-machine{font-weight:600}
@@ -209,7 +209,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.5</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.6</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
