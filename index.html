@@ -210,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.3</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.4</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -795,20 +795,42 @@ async function pripojit(){
   button.textContent=niimbotConnected?"🟢 Odpojiť Niimbot M2":"🔴 Pripojiť Niimbot M2";
  }
 }
+async function rotateSmallLabelForM2H(blob){
+ const bitmap=await createImageBitmap(blob);
+ const canvas=document.createElement("canvas");
+ canvas.width=bitmap.height;
+ canvas.height=bitmap.width;
+ const ctx=canvas.getContext("2d",{alpha:false});
+ if(!ctx)throw new Error("Nepodarilo sa pripraviť obraz štítku.");
+ ctx.fillStyle="#fff";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality="high";
+ // Preview is 30 × 50 mm; M2-H feeds a 50 mm-wide × 30 mm-long label.
+ ctx.translate(canvas.width,0);
+ ctx.rotate(Math.PI/2);
+ ctx.drawImage(bitmap,0,0);
+ bitmap.close?.();
+ return await new Promise((resolve,reject)=>{
+  canvas.toBlob(result=>result?resolve(result):reject(new Error("Otočený obraz štítku sa nepodarilo vytvoriť.")),"image/png");
+ });
+}
 async function printBlobWithNiimbot(blob){
  if(!window.Niimbot)throw new Error("Ovládač Niimbot sa nenačítal. Obnov stránku cez Ctrl + F5.");
  if(!niimbotConnected||!Niimbot.printer)throw new Error("Najprv klikni na „Pripojiť Niimbot M2“ a vyber tlačiareň cez Bluetooth.");
  if(Number(Niimbot.printer.modelId)!==NIIMBOT_M2H_MODEL_ID)throw new Error("Nie je pripojená podporovaná tlačiareň Niimbot M2-H.");
- // M2-H: 300 dpi. Preview is portrait; width is across the printhead, height is feed.
- // Keep the measured 567 px width margin on a 50 mm wide label.
- const widthMm=Number(activeLabelProfile.width);
- const heightMm=Number(activeLabelProfile.height);
+
+ // M2-H prints across 50 mm of its 300 dpi head. The small preview is
+ // portrait (30 × 50 mm), so rotate it to the physical 50 × 30 mm feed.
+ const isSmall=activeLabelProfile===LABEL_PROFILES.small;
+ const printBlob=isSmall?await rotateSmallLabelForM2H(blob):blob;
+ const printHeightMm=isSmall?30:90;
  const size={
-  w_px:Math.min(567,Math.max(1,Math.round(widthMm*300/25.4))),
-  h_px:Math.max(1,Math.round(heightMm*300/25.4)),
+  w_px:567,
+  h_px:Math.round(printHeightMm*300/25.4),
   offset_y_px:0
  };
- const imageUrl=URL.createObjectURL(blob);
+ const imageUrl=URL.createObjectURL(printBlob);
  try{
   $("printerConnectionStatus").textContent="Odosielam štítok do Niimbot M2-H…";
   await Niimbot.printImage(imageUrl,{
