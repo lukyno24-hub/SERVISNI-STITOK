@@ -209,7 +209,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.0</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.1</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1383,6 +1383,8 @@ async function connectSharedStorage(){
    sharedStorageRevision=Number(remote.revision)||0;
   }
   sharedStorageConnected=true;
+  $("folderButton").textContent="📚 Kartotéka";
+  $("folderButton").title="Otvoriť spoločnú kartotéku uloženú na hlavnom počítači.";
   button.textContent="✅ Spoločná kartotéka pripojená";
   button.title="Kartotéka sa synchronizuje s hlavným počítačom 192.168.88.242.";
   $("sharedStatus").textContent="Pripojené k hlavnému PC. Mená, čísla, stroje a servisná história sa ukladajú spoločne.";
@@ -1571,7 +1573,7 @@ function restoreFormDraft(){
  return true;
 }
 function folderButtonAction(){
- if(labelFolderHandle){openFilingCabinet();return;}
+ if(sharedStorageConnected||labelFolderHandle){openFilingCabinet();return;}
  chooseLabelFolder();
 }
 function openFilingCabinet(){
