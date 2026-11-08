@@ -201,7 +201,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.5</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.6</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -230,6 +230,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
    <option value="machine">Označenia stroja</option>
    <option value="ownerName">Mena</option>
    <option value="ownerNumber">Čísla</option>
+   <option value="date">Dátumu</option>
   </select>
   <div id="filingCabinetList" class="filing-cabinet-list"></div>
   <button type="button" class="light" onclick="changeLabelFolder()">📁 Zmeniť priečinok</button>
@@ -1546,7 +1547,16 @@ function renderFilingCabinet(){
   return !query||searchable.includes(query);
  });
  const sortField=$("filingSort")?.value||"machine";
+ const filingDateValue=item=>{
+  const updated=Date.parse(item.updatedAt||"");
+  if(Number.isFinite(updated))return updated;
+  const latest=(item.records||[]).map(record=>Date.parse((record.date||"")+"T12:00:00")).filter(Number.isFinite);
+  return latest.length?Math.max(...latest):0;
+ };
  entries.sort((a,b)=>{
+  if(sortField==="date"){
+   return filingDateValue(b)-filingDateValue(a)||String(a.machine||"").localeCompare(String(b.machine||""),"sk",{sensitivity:"base",numeric:true});
+  }
   const av=String(a[sortField]||"").trim();
   const bv=String(b[sortField]||"").trim();
   const comparison=av.localeCompare(bv,"sk",{sensitivity:"base",numeric:true});
@@ -1578,7 +1588,7 @@ function renderFilingCabinet(){
   const owner=ownerFields.filter(([,value])=>String(value||"").trim()).map(([field,value])=>
    '<div class="filing-identity-'+field+'">'+escapeHtml(value)+'</div>'
   ).join("")||'<div>Majiteľ nie je vyplnený</div>';
-  if(sortField==="machine"){
+  if(sortField==="machine"||sortField==="date"){
    return '<div class="filing-owner-frame'+(machineIndex%2===1?' filing-owner-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
   }
   if(sortField==="ownerNumber"){
@@ -1613,6 +1623,12 @@ function renderFilingCabinet(){
   $("filingCabinetList").innerHTML=grouped.length?grouped.map(group=>{
    const heading=group.number||"Číslo nie je vyplnené";
    return '<div class="filing-record"><div class="filing-number-heading">'+escapeHtml(heading)+'</div>'+group.items.map((item,index)=>renderMachineDetails(item,true,index)).join("")+'</div>';
+  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
+ }else if(sortField==="date"){
+  $("filingCabinetList").innerHTML=entries.length?entries.map((item,index)=>{
+   const dateValue=filingDateValue(item);
+   const dateLabel=dateValue?new Date(dateValue).toLocaleDateString("sk-SK"):"Bez dátumu";
+   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+' <span class="small" style="font-weight:400">· '+escapeHtml(dateLabel)+'</span></div>'+renderMachineDetails(item,true,index)+'</div>';
   }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }else{
   const groups=new Map();
