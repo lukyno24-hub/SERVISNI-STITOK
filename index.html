@@ -201,7 +201,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.6</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.7</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1625,11 +1625,27 @@ function renderFilingCabinet(){
    return '<div class="filing-record"><div class="filing-number-heading">'+escapeHtml(heading)+'</div>'+group.items.map((item,index)=>renderMachineDetails(item,true,index)).join("")+'</div>';
   }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }else if(sortField==="date"){
-  $("filingCabinetList").innerHTML=entries.length?entries.map((item,index)=>{
-   const dateValue=filingDateValue(item);
-   const dateLabel=dateValue?new Date(dateValue).toLocaleDateString("sk-SK"):"Bez dátumu";
-   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+' <span class="small" style="font-weight:400">· '+escapeHtml(dateLabel)+'</span></div>'+renderMachineDetails(item,true,index)+'</div>';
-  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
+  const datedServices=[];
+  entries.forEach(item=>{
+   (Array.isArray(item.records)?item.records:[]).forEach((record,index)=>{
+    const dateValue=Date.parse(String(record.date||"")+"T12:00:00");
+    datedServices.push({item,record,index,dateValue:Number.isFinite(dateValue)?dateValue:0});
+   });
+  });
+  datedServices.sort((a,b)=>b.dateValue-a.dateValue
+   ||String(a.item.machine||"").localeCompare(String(b.item.machine||""),"sk",{sensitivity:"base",numeric:true})
+   ||a.index-b.index);
+  $("filingCabinetList").innerHTML=datedServices.length?datedServices.map(({item,record,index})=>{
+   const hasUnit=record.unit==="km"||record.unit==="mh";
+   const unit=record.unit==="mh"?"MTH":"KM";
+   const dateLabel=record.date?fmtDate(record.date):"Bez dátumu";
+   const current=hasUnit&&record.current?" · Stav: "+escapeHtml(record.current)+" "+unit:"";
+   const next=hasUnit&&record.nextKm?" · Ďalší stav: "+escapeHtml(record.nextKm)+" "+unit:"";
+   const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
+   const printCount=Math.max(0,Number(record.printCount)||(record.printed===true?1:0));
+   const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+formatPrintedCount(printCount)+'</strong></span>';
+   return '<div class="filing-owner-frame"><div class="filing-owner-machine">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+' · '+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div><div class="filing-service-entry"><div class="filing-service-date"><strong>'+escapeHtml(dateLabel)+'</strong>'+printedStatus+'</div><div class="filing-service-body"><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+index+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+index+'">Vymazať</button><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button></div></div></div></div>';
+  }).join(""):'<div class="status">Kartotéka zatiaľ neobsahuje servisné záznamy s dátumom.</div>';
  }else{
   const groups=new Map();
   entries.forEach(item=>{
