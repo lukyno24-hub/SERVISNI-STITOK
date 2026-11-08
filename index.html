@@ -192,7 +192,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.1</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.2</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1516,7 +1516,7 @@ function renderFilingCabinet(){
    '<div class="filing-identity-'+field+'">'+escapeHtml(value)+'</div>'
   ).join("")||'<div>Majiteľ nie je vyplnený</div>';
   if(sortField==="machine"){
-   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-frame'+(machineIndex%2===1?' filing-owner-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div></div>';
+   return '<div class="filing-owner-frame'+(machineIndex%2===1?' filing-owner-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
   }
   if(sortField==="ownerNumber"){
    return '<div class="filing-owner-frame'+(machineIndex%2===1?' filing-owner-frame-alt':'')+'"><div class="filing-owner-machine">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-owner-number">'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</div>'+count+serviceHtml+machineActionButtons+'</div>';
@@ -1552,7 +1552,22 @@ function renderFilingCabinet(){
    return '<div class="filing-record"><div class="filing-number-heading">'+escapeHtml(heading)+'</div>'+group.items.map((item,index)=>renderMachineDetails(item,true,index)).join("")+'</div>';
   }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }else{
-  $("filingCabinetList").innerHTML=entries.length?entries.map((item,index)=>renderMachineDetails(item,true,index)).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
+  const groups=new Map();
+  entries.forEach(item=>{
+   const normalized=String(item.machine||"").trim().split(" ").filter(Boolean).join(" ").toLocaleLowerCase("sk-SK");
+   const groupKey=normalized?"machine:"+normalized:"machine:"+item.key;
+   if(!groups.has(groupKey))groups.set(groupKey,{machine:String(item.machine||"").trim(),items:[]});
+   groups.get(groupKey).items.push(item);
+  });
+  const grouped=[...groups.values()].sort((a,b)=>a.machine.localeCompare(b.machine,"sk",{sensitivity:"base",numeric:true}));
+  grouped.forEach(group=>group.items.sort((a,b)=>{
+   const nameCompare=String(a.ownerName||"").localeCompare(String(b.ownerName||""),"sk",{sensitivity:"base",numeric:true});
+   return nameCompare||String(a.ownerNumber||"").localeCompare(String(b.ownerNumber||""),"sk",{sensitivity:"base",numeric:true});
+  }));
+  $("filingCabinetList").innerHTML=grouped.length?grouped.map(group=>{
+   const heading=group.machine||"Označenie stroja nie je vyplnené";
+   return '<div class="filing-record filing-machine-sort"><div class="filing-machine-heading">'+escapeHtml(heading)+'</div>'+group.items.map((item,index)=>renderMachineDetails(item,true,index)).join("")+'</div>';
+  }).join(""):'<div class="status">Kartotéka je zatiaľ prázdna. Naskenuj QR kód a vyplň interné údaje majiteľa.</div>';
  }
  $("filingCabinetList").querySelectorAll("[data-delete-service]").forEach(button=>button.addEventListener("click",()=>{
   const key=button.dataset.deleteService;
