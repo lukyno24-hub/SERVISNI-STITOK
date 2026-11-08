@@ -67,7 +67,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
 .filing-owner-frame .filing-owner-machine{font-weight:600}
 .filing-owner-frame-alt{background:#fff}
-.filing-service-list{display:grid;gap:7px;margin-top:8px}
+.filing-service-list{display:grid;gap:0;margin-top:8px}
+/* Modré servisné rámiky sa spájajú v rámci jedného žltého rámika. */
+.filing-service-entry+.filing-service-entry{border-top:3px solid var(--blue);margin-top:0}
+.filing-service-entry:has(+ .filing-service-entry){border-bottom:3px solid var(--blue)}
 .filing-service-entry{padding:8px;border:1px solid var(--line);border-left:3px solid var(--blue);background:#fff;border-radius:5px}
 .filing-service-date{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:7px}
 .filing-service-body{border:1px solid var(--line);border-radius:7px;background:#f2f4f7;padding:8px;min-height:calc(100% - 28px)}
@@ -193,7 +196,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.8</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.9</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
