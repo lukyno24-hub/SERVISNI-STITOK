@@ -64,17 +64,16 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 
 .filing-owner-heading{font-size:14px;font-weight:700;margin:0 0 7px;color:#1f2937}
 .filing-owner-frame{border:1px solid var(--line);border-left:3px solid #facc15;border-radius:8px;padding:9px;background:#f2f4f7}
-.filing-date-entry{padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
-.filing-date-entry:nth-child(even){background:#f2f4f7}
-.filing-date-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-weight:700}
-.filing-date-owner{padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#fff;font-size:13px}.filing-date-owner>.filing-date-machine{margin-top:8px}
-.filing-date-machine{padding:8px 9px;border:1px solid var(--line);border-left:3px solid #facc15;border-radius:7px;background:#f2f4f7}
+/* Dátumové zobrazenie: jedna sivá interná karta s jasne oddelenými vnútornými políčkami. */
+.filing-date-entry{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#f2f4f7}
+.filing-date-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#fff;font-weight:700}
+.filing-date-owner{padding:9px;border:1px solid var(--line);border-radius:7px;background:#dfe3e8;color:#1f2937;font-size:13px}
+.filing-date-machine{padding:9px;border:1px solid var(--line);border-radius:7px;background:#fff}
 .filing-date-machine-name{font-size:13px;font-weight:700;margin-bottom:7px}
-/* Všetky vnorené rámiky preberajú pozadie celého dátumového políčka. */
-.filing-date-entry .filing-date-owner,
-.filing-date-entry .filing-date-machine,
-.filing-date-entry .filing-service-entry,
-.filing-date-entry .filing-service-body{background:inherit}
+.filing-date-service{padding:9px;border:1px solid var(--line);border-radius:7px;background:#e5e7eb}
+.filing-date-service .filing-service-description{font-size:13px;font-weight:600;color:#1f2937;overflow-wrap:anywhere}
+.filing-date-service .small{font-size:11px;color:var(--muted);margin-top:4px}
+.filing-date-service .filing-record-actions,.filing-date-machine .filing-record-actions{margin-top:8px}
 .filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
 .filing-owner-frame .filing-owner-machine{font-weight:600}
 .filing-owner-frame-alt{background:#fff}
@@ -212,7 +211,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.1</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.2</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1655,7 +1654,7 @@ function renderFilingCabinet(){
    const nextDate=record.nextDate?" · Ďalší servis: "+fmtDate(record.nextDate):"";
    const printCount=Math.max(0,Number(record.printCount)||(record.printed===true?1:0));
    const printedStatus='<span class="filing-service-printed">Vytlačené <strong class="filing-service-print-number">'+formatPrintedCount(printCount)+'</strong></span>';
-   return '<div class="filing-date-entry"><div class="filing-date-heading"><strong>'+escapeHtml(dateLabel)+'</strong>'+printedStatus+'</div><div class="filing-date-owner"><strong>'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</strong> · '+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'<div class="filing-date-machine"><div class="filing-date-machine-name">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-service-entry"><div class="filing-service-body"><div>'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+index+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+index+'">Vymazať</button><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button></div></div></div></div></div></div>';
+   return '<div class="filing-date-entry"><div class="filing-date-heading"><strong>'+escapeHtml(dateLabel)+'</strong>'+printedStatus+'</div><div class="filing-date-owner"><strong>'+escapeHtml(item.ownerName||"Meno nie je vyplnené")+'</strong> · '+escapeHtml(item.ownerNumber||"Číslo nie je vyplnené")+'</div><div class="filing-date-machine"><div class="filing-date-machine-name">'+escapeHtml(item.machine||"Neoznačený stroj")+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-machine="'+escapeHtml(item.key)+'">Otvoriť stroj</button><button type="button" class="danger" data-delete-machine="'+escapeHtml(item.key)+'">Vymazať stroj</button></div></div><div class="filing-date-service"><div class="filing-service-description">'+escapeHtml(record.description||"Popis zásahu nie je vyplnený")+'</div><div class="small">'+current+'</div><div class="small">'+escapeHtml(nextDate)+next+'</div><div class="filing-record-actions"><button type="button" class="light" data-open-service="'+escapeHtml(item.key)+'" data-service-index="'+index+'">Otvoriť záznam</button><button type="button" class="danger" data-delete-service="'+escapeHtml(item.key)+'" data-service-index="'+index+'">Vymazať záznam</button></div></div></div>';
   }).join(""):'<div class="status">Kartotéka zatiaľ neobsahuje servisné záznamy s dátumom.</div>';
  }else{
   const groups=new Map();
