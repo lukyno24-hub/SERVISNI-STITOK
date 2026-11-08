@@ -65,10 +65,15 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 .filing-owner-heading{font-size:14px;font-weight:700;margin:0 0 7px;color:#1f2937}
 .filing-owner-frame{border:1px solid var(--line);border-left:3px solid #facc15;border-radius:8px;padding:9px;background:#f2f4f7}
 .filing-date-entry{padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.filing-date-entry:nth-child(even){background:#f2f4f7}
 .filing-date-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-weight:700}
 .filing-date-owner{padding:8px 9px;border:1px solid var(--line);border-radius:7px;background:#fff;font-size:13px}.filing-date-owner>.filing-date-machine{margin-top:8px}
 .filing-date-machine{padding:8px 9px;border:1px solid var(--line);border-left:3px solid #facc15;border-radius:7px;background:#f2f4f7}
 .filing-date-machine-name{font-size:13px;font-weight:700;margin-bottom:7px}
+.filing-date-entry:nth-child(even) .filing-date-owner{background:#f2f4f7}
+.filing-date-entry:nth-child(even) .filing-date-machine{background:#fff}
+.filing-date-entry:nth-child(even) .filing-service-entry{background:#f2f4f7}
+.filing-date-entry:nth-child(even) .filing-service-body{background:#fff}
 .filing-owner-frame .filing-owner-machine,.filing-owner-frame .filing-owner-number{font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
 .filing-owner-frame .filing-owner-machine{font-weight:600}
 .filing-owner-frame-alt{background:#fff}
@@ -206,7 +211,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.9</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.7.0</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
