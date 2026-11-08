@@ -192,7 +192,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.3</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.4</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1119,14 +1119,22 @@ function selectOwnerAutocompleteMatch(field){
  const query=ownerMachineKey(input.value);
  if(!query)return false;
  const entries=getMachineDirectoryEntries();
- const match=entries.find(item=>ownerMachineKey(String(isName?item.name:item.number||"").trim())===query);
- if(!match)return false;
+ const candidates=entries.filter(item=>ownerMachineKey(String(isName?item.name:item.number||"").trim())===query);
+ const machineKey=ownerMachineKey($("machine").value);
+ const sameMachine=machineKey?candidates.filter(item=>ownerMachineKey(item.machine)===machineKey):candidates;
+ const otherValue=ownerMachineKey(isName?$("ownerNumber").value:$("ownerName").value);
+ const exactPair=sameMachine.filter(item=>ownerMachineKey(isName?item.number:item.name)===otherValue);
+ const match=exactPair.length===1?exactPair[0]:sameMachine.length===1?sameMachine[0]:candidates.length===1?candidates[0]:null;
+ if(!match){
+  if(candidates.length>1)$("ownerMatchStatus").textContent="Tento údaj patrí viacerým kartám. Zadaj aj druhý údaj majiteľa, aby sa vybrala správna kombinácia.";
+  return false;
+ }
  $("machine").value=match.machine;
  $("ownerName").value=match.name;
  $("ownerNumber").value=match.number;
  autoFilledMachineKey=match.key;
  $("machineMatchStatus").textContent="Nájdené v kartotéke: "+match.machine;
- $("ownerMatchStatus").textContent="Načítané z kartotéky: "+match.machine;
+ $("ownerMatchStatus").textContent="Načítaná presná kombinácia stroja, mena a čísla.";
  return true;
 }
 function saveOwnerForMachine(){
@@ -1924,11 +1932,18 @@ $('machine').addEventListener('change',()=>{
  const matches=getMachineDirectoryEntries().filter(item=>ownerMachineKey(item.machine)===key);
  if(matches.length===1){
   $('machine').value=matches[0].machine;
-  $('ownerName').value=matches[0].name;
-  $('ownerNumber').value=matches[0].number;
-  autoFilledMachineKey=matches[0].key;
-  $('machineMatchStatus').textContent="Načítaná zhoda v kartotéke: "+matches[0].machine;
-  $('ownerMatchStatus').textContent="Načítané meno a číslo priradené k tomuto stroju.";
+  const nameAlreadyEntered=$('ownerName').value.trim();
+  const numberAlreadyEntered=$('ownerNumber').value.trim();
+  if(!nameAlreadyEntered)$('ownerName').value=matches[0].name;
+  if(!numberAlreadyEntered)$('ownerNumber').value=matches[0].number;
+  if((!nameAlreadyEntered||ownerMachineKey(nameAlreadyEntered)===ownerMachineKey(matches[0].name))&&(!numberAlreadyEntered||ownerMachineKey(numberAlreadyEntered)===ownerMachineKey(matches[0].number))){
+   autoFilledMachineKey=matches[0].key;
+   $('machineMatchStatus').textContent="Načítaná zhoda v kartotéke: "+matches[0].machine;
+   $('ownerMatchStatus').textContent="Načítané meno a číslo priradené k tomuto stroju.";
+  }else{
+   $('machineMatchStatus').textContent="Rovnaký stroj je už evidovaný s iným majiteľom. Tvoje meno a číslo zostali zachované ako samostatná kombinácia.";
+   $('ownerMatchStatus').textContent="Nová karta vznikne, ak sa meno alebo číslo líši.";
+  }
  }else if(matches.length>1){
   const nameKey=ownerMachineKey($('ownerName').value);
   const numberKey=ownerMachineKey($('ownerNumber').value);
