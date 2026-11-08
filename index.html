@@ -1909,7 +1909,10 @@ async function createLabelPngBlob(){
  const area=$('printArea');
  area.classList.add("saving-copy");
  try{
-  const canvas=await html2canvas(area,{backgroundColor:"#ffffff",scale:300/96,useCORS:true,logging:false});
+  const printWidthPx=Math.min(567,Math.max(1,Math.round(Number(activeLabelProfile.width)*300/25.4)));
+  const areaWidth=area.getBoundingClientRect().width;
+  const renderScale=areaWidth>0?printWidthPx/areaWidth:300/96;
+  const canvas=await html2canvas(area,{backgroundColor:"#ffffff",scale:renderScale,useCORS:true,logging:false});
   return await new Promise((resolve,reject)=>{
    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("PNG obrázok sa nepodarilo vytvoriť.")),"image/png");
   });
