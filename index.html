@@ -192,7 +192,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.4</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.5.5</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -1588,8 +1588,7 @@ function renderFilingCabinet(){
   const groups=new Map();
   entries.forEach(item=>{
    const normalized=ownerMachineKey(item.machine);
-   const identity=[normalized,ownerMachineKey(item.ownerName),ownerMachineKey(item.ownerNumber)].join("|");
-   const groupKey=normalized?"machine:"+identity:"machine:"+item.key;
+   const groupKey=normalized?"machine:"+normalized:"machine:"+item.key;
    if(!groups.has(groupKey))groups.set(groupKey,{machine:String(item.machine||"").trim(),items:[]});
    groups.get(groupKey).items.push(item);
   });
