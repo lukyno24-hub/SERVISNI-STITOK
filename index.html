@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="./vendor/niimbot.js"></script>
 <style>
 :root{--green:#198754;--blue:#0d6efd;--ink:#1f2937;--muted:#667085;--line:#e5e7eb}
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f3f5f8;color:var(--ink);margin:0;padding:18px}
@@ -209,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.1</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.2</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -409,6 +410,9 @@ let activeLabelProfile=LABEL_PROFILES.small;
 let labelDimensions={width:30,height:50};
 let printerDevice=null, printerTx=null, printerRx=null;
 let printerProtocolVersion=null;
+let niimbotConnected=false;
+const NIIMBOT_M2H_MODEL={name_prefixes:["M2"],task:"b1",density:3,label_type:1,speed:1};
+const NIIMBOT_M2H_MODEL_ID=4608;
 let printerRxBuffer=new Uint8Array(0);
 let printerResponseWaiters=new Map();
 const printerUuids=[
@@ -573,11 +577,6 @@ function setManualLabelSize(value){
  }
  if(viewingInternalService){
   $("paperSizeStatus").textContent="Pri prezeraní uloženého záznamu nie je možné meniť rozmer štítku.";
-  return;
- }
- if(printerDevice?.gatt?.connected){
-  $("paperSizeStatus").textContent="Rozmer štítku sa nastavuje automaticky podľa RFID v tlačiarni.";
-  updateLabelSizeChoices();
   return;
  }
  if(!applyLabelDimensions(profile.detected[0].width,profile.detected[0].height))return;
@@ -758,82 +757,72 @@ async function writePrinter(data){
  }
 }
 async function pripojit(){
- if(!navigator.bluetooth){
-  setPrinterState(false,"Tento prehliadač nepodporuje Web Bluetooth. Použi Chrome na Androide alebo počítači cez HTTPS.");
+ if(!window.Niimbot||!Niimbot.isSupported()){
+  setPrinterState(false,"Tento prehliadač nepodporuje Web Bluetooth. Použi Chrome alebo Edge cez HTTPS.");
   return;
  }
- if(printerDevice?.gatt?.connected){
-  printerDevice.gatt.disconnect();
+ if(niimbotConnected){
+  try{await Niimbot.disconnect();}catch(e){}
+  niimbotConnected=false;
+  setPrinterState(false,"Tlačiareň Niimbot M2-H bola odpojená.");
   return;
  }
- const button=$('printerButton');
+ const button=$("printerButton");
  button.disabled=true;
  button.textContent="Hľadám tlačiareň…";
- $('printerConnectionStatus').textContent="Vyber Niimbot M2 v zozname Bluetooth zariadení.";
+ $("printerConnectionStatus").textContent="Vyber Niimbot M2-H v Bluetooth zozname.";
  try{
-  printerDevice=await navigator.bluetooth.requestDevice({
-   filters:[{namePrefix:"M2"},{namePrefix:"NIIMBOT"},{namePrefix:"JC"}],
-   optionalServices:printerUuids
-  });
-  printerDevice.addEventListener('gattserverdisconnected',()=>{
-   printerTx=null;
-   if(printerRx){
-    try{printerRx.removeEventListener('characteristicvaluechanged',readPrinterFrame);}catch(e){}
-   }
-   printerRx=null;
-   printerRxBuffer=new Uint8Array(0);
-   printerResponseWaiters.forEach(waiter=>{clearTimeout(waiter.timer);waiter.reject(new Error("Spojenie bolo prerušené."));});
-   printerResponseWaiters.clear();
-   setPrinterState(false,"Spojenie s tlačiarňou bolo prerušené.");
-  });
-  $('printerConnectionStatus').textContent="Pripájam sa k "+(printerDevice.name||"tlačiarni")+"…";
-  const server=await printerDevice.gatt.connect();
-  let service=null;
-  for(const uuid of printerUuids){
-   try{service=await server.getPrimaryService(uuid);if(service)break;}catch(e){}
+  const info=await Niimbot.identify(NIIMBOT_M2H_MODEL);
+  if(!info||Number(info.modelId)!==NIIMBOT_M2H_MODEL_ID){
+   await Niimbot.disconnect();
+   const actual=info?String(info.label||"neznámy model")+" (ID "+info.modelId+")":"neznámy model";
+   throw new Error("Vybraná tlačiareň je "+actual+". Priama tlač je nastavená pre Niimbot M2-H (ID 4608).");
   }
-  if(!service) throw new Error("Tlačiareň neposkytla známu Bluetooth službu. Skontroluj, či ide o Niimbot M2.");
-  const characteristics=await service.getCharacteristics();
-  // Preferujeme jeden kanál, ktorý podporuje zápis aj notifikácie – takto ho vyberá aj NiimBlueLib.
-  const duplex=characteristics.find(ch=>ch.properties.notify&&(ch.properties.writeWithoutResponse||ch.properties.write));
-  printerTx=duplex||characteristics.find(ch=>ch.properties.writeWithoutResponse||ch.properties.write);
-  printerRx=duplex||characteristics.find(ch=>ch.properties.notify||ch.properties.indicate)||null;
-  if(!printerTx) throw new Error("V Bluetooth službe sa nenašiel kanál na odosielanie dát.");
-  if(!printerRx) throw new Error("Tlačiareň nemá oznamovací Bluetooth kanál; nedá sa načítať jej odpoveď.");
-  await printerRx.startNotifications();
-  printerRx.addEventListener('characteristicvaluechanged',readPrinterFrame);
-  printerRxBuffer=new Uint8Array(0);
-
-  // Správne prihlásenie do protokolu Niimbot: Connect 0xC1 -> Connect response 0xC2.
-  setPrinterState(false,"Bluetooth je spojený. Dohadujem protokol s tlačiarňou…");
-  const connectResponse=await requestPrinterResponse(0xc1,[0x01],0xc2,4500);
-  const connectResult=connectResponse.data[0];
-  if(connectResult===0||connectResult===90||connectResult===undefined){
-   throw new Error("Tlačiareň odmietla protokolové pripojenie (kód "+connectResult+").");
-  }
-  printerProtocolVersion=connectResult===2?1:0;
-  if(connectResult===3){
-   try{
-    const status=await requestPrinterResponse(0xa5,[0x01],0xb5,3000);
-    if(status.data.length>=13){
-     const versionCode=status.data[11]*100+status.data[12];
-     printerProtocolVersion=versionCode>=302?5:versionCode>=300?4:versionCode>=204?3:0;
-    }
-   }catch(e){
-    printerProtocolVersion=0;
-   }
-  }
-  setPrinterState(true,"Pripojená: "+(printerDevice.name||"Niimbot M2")+" (protokol "+(printerProtocolVersion||"nezistený")+")");
-  await detectOtherPrinterInfo();
+  niimbotConnected=true;
+  printerProtocolVersion=info.protocolVersion||null;
+  setPrinterState(true,"Pripojená: "+(info.label||"Niimbot M2-H")+" · Bluetooth pripravený na priamu tlač.");
+  $("printerMediaInfo").hidden=false;
+  $("paperSizeStatus").textContent="Rozmer štítku: "+activeLabelProfile.name+" (vybraný v aplikácii).";
+  $("labelUsed").textContent="—";
+  $("labelTotal").textContent="—";
+  $("ribbonUsed").textContent="—";
+  $("ribbonTotal").textContent="—";
  }catch(error){
-  printerTx=null;printerRx=null;
-  if(printerDevice?.gatt?.connected) printerDevice.gatt.disconnect();
+  niimbotConnected=false;
   setPrinterState(false,"Pripojenie zlyhalo: "+(error?.message||String(error)));
  }finally{
   button.disabled=false;
-  if(!printerDevice?.gatt?.connected) setPrinterState(false,$('printerConnectionStatus').textContent);
+  button.textContent=niimbotConnected?"🟢 Odpojiť Niimbot M2":"🔴 Pripojiť Niimbot M2";
  }
 }
+async function printBlobWithNiimbot(blob){
+ if(!window.Niimbot)throw new Error("Ovládač Niimbot sa nenačítal. Obnov stránku cez Ctrl + F5.");
+ if(!niimbotConnected||!Niimbot.printer)throw new Error("Najprv klikni na „Pripojiť Niimbot M2“ a vyber tlačiareň cez Bluetooth.");
+ if(Number(Niimbot.printer.modelId)!==NIIMBOT_M2H_MODEL_ID)throw new Error("Nie je pripojená podporovaná tlačiareň Niimbot M2-H.");
+ // M2-H: 300 dpi. Preview is portrait; width is across the printhead, height is feed.
+ // Keep the measured 567 px width margin on a 50 mm wide label.
+ const widthMm=Number(activeLabelProfile.width);
+ const heightMm=Number(activeLabelProfile.height);
+ const size={
+  w_px:Math.min(567,Math.max(1,Math.round(widthMm*300/25.4))),
+  h_px:Math.max(1,Math.round(heightMm*300/25.4)),
+  offset_y_px:0
+ };
+ const imageUrl=URL.createObjectURL(blob);
+ try{
+  $("printerConnectionStatus").textContent="Odosielam štítok do Niimbot M2-H…";
+  await Niimbot.printImage(imageUrl,{
+   model:NIIMBOT_M2H_MODEL,
+   size,
+   copies:1,
+   onProgress:message=>{$("printerConnectionStatus").textContent="Niimbot: "+message;}
+  });
+  $("printerConnectionStatus").textContent="Tlačiareň potvrdila dokončenie tlače.";
+ }finally{
+  URL.revokeObjectURL(imageUrl);
+ }
+}
+
 function calculateNextDate(){
  const start=$('date').value;
  const months=[...document.querySelectorAll('input[name="nextPeriod"]:checked')].reduce((sum,el)=>sum+Number(el.value||0),0);
@@ -1972,33 +1961,67 @@ async function saveLabelCopy(){
  $("saveCopyStatus").textContent=(destination==="folder"?"PNG štítok bol uložený do priečinka.":"PNG štítok bol stiahnutý.")+" Interný záznam je uložený v kartotéke.";
  if(!$("filingCabinet").hidden)renderFilingCabinet();
 }
-function printAndSaveLabel(){
- // Uložíme aj aktuálny servis do internej kartotéky; do QR ani na štítok sa majiteľ nepridáva.
+function markServicePrintedAfterSuccess(savedRecord){
+ if(!savedRecord)return;
+ const directory=readInternalRecords();
+ const machineKey=ownerMachineKey($("machine").value);
+ const nameKey=ownerMachineKey($("ownerName").value);
+ const numberKey=ownerMachineKey($("ownerNumber").value);
+ const key=editingMachineKey&&directory[editingMachineKey]
+  ?editingMachineKey
+  :Object.keys(directory).find(storedKey=>{
+   const item=directory[storedKey]||{};
+   return ownerMachineKey(item.machine||storedKey)===machineKey
+    &&ownerMachineKey(item.ownerName||"")===nameKey
+    &&ownerMachineKey(item.ownerNumber||"")===numberKey;
+  });
+ if(!key||!Array.isArray(directory[key].records))return;
+ const signature=value=>["date","current","unit","description","nextDate","nextKm"].map(field=>String(value[field]||"")).join("|");
+ const record=directory[key].records.find(item=>signature(item)===signature(savedRecord));
+ if(!record)return;
+ record.printCount=(Number(record.printCount)||(record.printed===true?1:0))+1;
+ record.physicalPrintCount=(Number(record.physicalPrintCount)||0)+1;
+ record.printed=true;
+ record.printedAt=new Date().toISOString();
+ directory[key].updatedAt=new Date().toISOString();
+ localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
+}
+async function printAndSaveLabel(){
+ if(!niimbotConnected){
+  $("saveCopyStatus").textContent="Najprv pripoj tlačiareň Niimbot M2 cez Bluetooth.";
+  return;
+ }
  const description=buildServiceDescription();
+ let draft=null;
  if(description){
   const unit=document.querySelector('input[name="unit"]:checked')?.value||"";
-  const draft={
+  draft={
    date:$("date").value,
    current:unit?$("current").value.trim():"",
    unit,
    description,
    nextDate:$("nextDate").value,
    nextKm:unit==="km"?$("nextKm").value.trim():unit==="mh"?$("nextKmManual").value.trim():"",
-   labelProfile:activeLabelProfile.id,
-   printed:true,
-   printedAt:new Date().toISOString()
+   labelProfile:activeLabelProfile.id
   };
-  if(!saveInternalMachineRecord(draft))return;
- }else{
-  if(!saveInternalMachineRecord())return;
  }
- clearFormDraft();
- // Tlač sa spustí priamo v kliknutí používateľa; kópia sa uloží po zavretí tlačového dialógu.
- window.print();
- saveLabelCopy().catch(error=>{
-  $('saveCopyStatus').textContent="Kópiu sa nepodarilo uložiť: "+(error?.message||String(error));
- });
+ if(!saveInternalMachineRecord(draft))return;
+ try{
+  $("saveCopyStatus").textContent="Pripravujem štítok a odosielam ho priamo cez Bluetooth…";
+  const blob=await createLabelPngBlob();
+  await printBlobWithNiimbot(blob);
+  markServicePrintedAfterSuccess(draft);
+  let destination="download";
+  try{destination=await writeLabelBlob(blob,makeLabelFileName());}
+  catch(error){$("folderStatus").textContent="Tlač prebehla, ale PNG kópiu sa nepodarilo uložiť: "+(error?.message||String(error));}
+  clearFormDraft();
+  $("saveCopyStatus").textContent="Niimbot potvrdil tlač. PNG kópia: "+(destination==="shared"?"uložená v spoločnom priečinku.":destination==="folder"?"uložená vo vybranom priečinku.":"stiahnutá do zariadenia.");
+  if(!$("filingCabinet").hidden)renderFilingCabinet();
+ }catch(error){
+  $("saveCopyStatus").textContent="Tlač sa nepodarila: "+(error?.message||String(error))+". Záznam zostal uložený v kartotéke.";
+ }
 }
+
 function formatPrintedCount(value){
  const count=Math.max(0,Math.floor(Number(value)||0));
  return count===0?"":count===1?"✓":String(count);
@@ -2070,13 +2093,25 @@ function markViewedServiceAsPrinted(){
  localStorage.setItem(INTERNAL_RECORDS_KEY,JSON.stringify(directory));
  updatePrintCountControl();
 }
-function handlePreviewPrint(){
- if(viewingInternalService){
-  markViewedServiceAsPrinted();
-  window.print();
+async function handlePreviewPrint(){
+ if(!niimbotConnected){
+  $("saveCopyStatus").textContent="Najprv pripoj tlačiareň Niimbot M2 cez Bluetooth.";
   return;
  }
- printAndSaveLabel();
+ if(!viewingInternalService){
+  await printAndSaveLabel();
+  return;
+ }
+ try{
+  const blob=await createLabelPngBlob();
+  $("saveCopyStatus").textContent="Odosielam servisný štítok priamo do Niimbotu…";
+  await printBlobWithNiimbot(blob);
+  markViewedServiceAsPrinted();
+  try{await writeLabelBlob(blob,makeLabelFileName());}catch(e){}
+  $("saveCopyStatus").textContent="Niimbot potvrdil tlač servisného záznamu.";
+ }catch(error){
+  $("saveCopyStatus").textContent="Tlač sa nepodarila: "+(error?.message||String(error));
+ }
 }
 function openPreview(){
  // Otvoriť pôvodný náhľad; pri prezeraní histórie ponúknuť iba tlač.
