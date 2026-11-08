@@ -201,7 +201,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.3</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.6.4</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -246,6 +246,10 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 <div><label for="ownerNumber">Číslo</label><input id="ownerNumber" list="ownerNumberSuggestions" inputmode="numeric" autocomplete="off" placeholder="Začni písať číslo"><datalist id="ownerNumberSuggestions"></datalist></div>
 
 <div class="full machine-autocomplete-wrap"><label for="machine">Označenie stroja</label><input id="machine" list="machineSuggestions" autocomplete="off" placeholder="Začni písať označenie stroja"><datalist id="machineSuggestions"></datalist><div id="machineMatchStatus" class="small" aria-live="polite"></div></div>
+<div class="full">
+ <button id="homeSaveButton" class="secondary full" type="button" onclick="saveMachineDetails()">💾 Uložiť</button>
+ <div id="homeSaveStatus" class="status" role="status"></div>
+</div>
 <div><label for="date">Dátum servisného zásahu</label><input id="date" type="date"></div>
 <div class="full"><label>Jednotka merania (nepovinné)</label><div class="unit-choice">
 <label><input type="radio" name="unit" value="km"> Kilometre (km)</label>
@@ -322,10 +326,6 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </div>
 <div id="nextKmManualField" hidden><label for="nextKmManual" id="nextLabel">Stav pri ďalšej výmene (MTH)</label><input id="nextKmManual" inputmode="numeric" placeholder="3920"></div>
 </div>
-<div class="actions" style="margin-top:14px">
- <button id="homeSaveButton" class="secondary full" type="button" onclick="saveLabelCopy().then(()=>{ $('homeSaveStatus').textContent=$('saveCopyStatus').textContent; }).catch(error=>{ $('homeSaveStatus').textContent='Uloženie zlyhalo: '+(error?.message||String(error)); })">💾 Uložiť štítok</button>
-</div>
-<div id="homeSaveStatus" class="status" role="status"></div>
 </section>
 
 <section class="panel">
@@ -1340,6 +1340,21 @@ function saveInternalMachineRecord(extraRecord=null){
   $("saveCopyStatus").textContent="Interný záznam sa nepodarilo uložiť do kartotéky. Skontroluj voľné miesto v zariadení.";
   return false;
  }
+}
+function saveMachineDetails(){
+ const machine=$("machine").value.trim();
+ const name=$("ownerName").value.trim();
+ const number=$("ownerNumber").value.trim();
+ if(!machine||!name||!number){
+  $("homeSaveStatus").textContent="Vyplň označenie stroja, meno aj číslo majiteľa.";
+  return;
+ }
+ if(!saveInternalMachineRecord(null)){
+  $("homeSaveStatus").textContent=$("saveCopyStatus").textContent||"Údaje sa nepodarilo uložiť.";
+  return;
+ }
+ scheduleFormDraftSave();
+ $("homeSaveStatus").textContent="Údaje stroja a majiteľa boli uložené do kartotéky.";
 }
 const FORM_DRAFT_KEY="servisnyAsistentFormDraft_v1";
 let formDraftTimer=null;
