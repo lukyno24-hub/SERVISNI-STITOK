@@ -210,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.0</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.1</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -495,6 +495,9 @@ function applyLabelDimensions(width,height){
   css+="#printArea.small-label .service-print-group{margin-top:0.25mm}";
   css+="#printArea.small-label .service-print-title{font-weight:bold;font-size:5.3pt;line-height:1.2;margin-bottom:0.1mm;text-align:center}";
   css+="#printArea.small-label .service-print-items{display:grid;grid-template-columns:1fr 1fr;column-gap:0.7mm;row-gap:0}";
+  css+="#printArea.small-label .service-print-items{grid-auto-flow:row;grid-auto-rows:minmax(1.65mm,auto);align-content:start}";
+  css+="#printArea.small-label .service-print-group{margin-top:0.1mm;margin-bottom:0.15mm}";
+  css+="#printArea.small-label .label-next{margin-top:0.15mm}";
   css+="#printArea.small-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:0.4mm;font-size:4.9pt;line-height:1.2;min-width:0}";
   css+="#printArea.small-label .service-check{width:1.7mm;height:1.7mm;min-width:1.7mm;border:0.2mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:4.5pt;font-weight:bold;line-height:1}";
   css+="#printArea.small-label .service-print-note{font-size:4.8pt;line-height:1.2;margin-top:0.2mm}";
