@@ -923,12 +923,14 @@
   }
 
   // ── Bitmap: image → rows packed MSB-first (1 = black) ───────────────────────
-  async function imageToPacked(url, w, h, offsetY) {
+  async function imageToPacked(url, w, h, offsetY, threshold) {
     const dy = offsetY | 0;   // print-position calibration (paper registration, not scale — w/h stay put); dy > 0 shifts down, dy < 0 shifts up
     const bmp = await fetch(url).then((r) => r.blob()).then((b) => createImageBitmap(b));
     const canvas = document.createElement("canvas");
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
     ctx.drawImage(bmp, 0, dy, w, h);   // dy > 0 (e.g. T50x30_b1: +4): top dy rows stay white, bottom dy rows fall off the page.
                                        // dy < 0 (e.g. T15x50: -2): top |dy| rows of the SOURCE image are cut off, bottom |dy| rows of the page stay white.
@@ -940,7 +942,7 @@
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
         const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-        if (px[i + 3] > 32 && lum < 178) buf[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
+        if (px[i + 3] > 32 && lum < (threshold == null ? 178 : threshold)) buf[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
       }
     }
     return { buf, stride };
@@ -1247,7 +1249,7 @@
     await connect(model);
     assertSelection(model, size);
     const offsetY = opts.offsetY != null ? opts.offsetY : (size.offset_y_px || 0);
-    const { buf, stride } = await imageToPacked(url, size.w_px, size.h_px, offsetY);
+    const { buf, stride } = await imageToPacked(url, size.w_px, size.h_px, offsetY, opts.monoThreshold);
     _t0 = Date.now(); _lastPage = -1;                                        // timing trace (DEBUG)
 
     // pagesPerJob: 1 — this printer acks a multi-page/multi-copy job but only actually
