@@ -210,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.6</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.7</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -411,7 +411,7 @@ let labelDimensions={width:30,height:50};
 let printerDevice=null, printerTx=null, printerRx=null;
 let printerProtocolVersion=null;
 let niimbotConnected=false;
-const NIIMBOT_M2H_MODEL={name_prefixes:["M2"],task:"b1",density:4,label_type:1,speed:1};
+const NIIMBOT_M2H_MODEL={name_prefixes:["M2"],task:"b1",density:5,label_type:1,speed:1};
 const NIIMBOT_M2H_MODEL_ID=4608;
 let printerRxBuffer=new Uint8Array(0);
 let printerResponseWaiters=new Map();
