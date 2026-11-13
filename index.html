@@ -210,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.4</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.5</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -482,6 +482,7 @@ function applyLabelDimensions(width,height){
  }
  if(isSmall){
   css+="#printArea.small-label{width:30mm;height:50mm;max-width:none;flex:none;display:flex;flex-direction:column;margin:0;border:1px dashed #9ca3af;padding:1mm;background:white;color:#111;overflow:hidden}";
+  css+="#printArea.small-label,#printArea.small-label *{font-family:Tahoma,Arial,sans-serif!important}";
   css+="#printArea.small-label .label-header{text-align:center;font-size:5.2pt;line-height:1.25;margin:0 0 0.8mm;overflow-wrap:anywhere;flex:0 0 auto}";
   css+="#printArea.small-label h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0 0 0.3mm;text-align:center;font-size:5.8pt;line-height:1.25;letter-spacing:-0.15pt}";
   css+="#printArea.small-label .header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:4.8pt;line-height:1.25}";
