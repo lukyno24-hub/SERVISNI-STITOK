@@ -210,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.4</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.8.5</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -485,7 +485,8 @@ function applyLabelDimensions(width,height){
   css+="#printArea.small-label .label-header{text-align:center;font-size:5.2pt;line-height:0.9;margin:0 0 0.4mm;overflow-wrap:anywhere;flex:0 0 auto}";
   css+="#printArea.small-label h3{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%;margin:0;text-align:center;font-size:5.8pt;line-height:0.9;letter-spacing:-0.15pt}";
   css+="#printArea.small-label .header-contact-row{display:flex;justify-content:space-evenly;align-items:center;gap:0;white-space:nowrap;font-size:4.8pt;line-height:0.85}";
-  css+="#printArea.small-label .header-email{font-size:3.7pt;line-height:0.85;white-space:nowrap;letter-spacing:-0.28pt;overflow:hidden;text-align:center;width:100%}";
+  css+="#printArea.small-label .label-header{width:26mm;max-width:26mm;align-self:center;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box}";
+  css+="#printArea.small-label .header-email{font-family:\'Arial Narrow\',\'Liberation Sans Narrow\',Arial,sans-serif;font-size:4.1pt;line-height:1;white-space:nowrap;letter-spacing:-0.38pt;overflow:visible;text-align:center;width:100%;font-stretch:condensed}";
   css+="#printArea.small-label .label-info{font-size:5.4pt;line-height:0.9;overflow-wrap:anywhere;min-height:0}";
   css+="#printArea.small-label .service-section-title{display:block;text-align:center;font-weight:bold;font-size:5.6pt;line-height:0.9}";
   css+="#printArea.small-label .label-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:0.5mm;white-space:nowrap;width:100%;font-size:5.2pt;line-height:0.9}";
