@@ -210,7 +210,7 @@ button{border:0;border-radius:8px;padding:12px 14px;font-size:15px;font-weight:b
 </head>
 <body>
 <main>
-<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.1</div>
+<h1>Servisný Asistent</h1><div class="sub">Vytváranie servisných štítkov s kompletnou históriou v QR kóde</div><div class="version-number">4.9.2</div>
 <section class="panel printer-panel">
 <button id="printerButton" class="printer-button disconnected" type="button" onclick="pripojit()">🔴 Pripojiť Niimbot M2</button>
 <div id="printerStatus" class="status" role="status">
@@ -498,6 +498,18 @@ function applyLabelDimensions(width,height){
   css+="#printArea.small-label .service-print-items{grid-auto-flow:row;grid-auto-rows:minmax(1.65mm,auto);align-content:start}";
   css+="#printArea.small-label .service-print-group{margin-top:0.1mm;margin-bottom:0.15mm}";
   css+="#printArea.small-label .label-next{margin-top:0.15mm}";
+  // Keep service sections at their natural height: flex shrinking caused rows to overlap.
+  css+="#printArea.small-label{padding:0.65mm!important;}";
+  css+="#printArea.small-label .label-header{flex:0 0 auto!important;margin-bottom:0.3mm!important;line-height:1.15!important;}";
+  css+="#printArea.small-label h3{line-height:1.15!important;margin-bottom:0.15mm!important;}";
+  css+="#printArea.small-label .header-contact-row,#printArea.small-label .header-email{line-height:1.12!important;}";
+  css+="#printArea.small-label .label-info{flex:0 0 auto!important;line-height:1.12!important;min-height:auto!important;}";
+  css+="#printArea.small-label .service-section-title{line-height:1.15!important;padding-bottom:0.12mm!important;}";
+  css+="#printArea.small-label .label-meta-row{line-height:1.15!important;}";
+  css+="#printArea.small-label .service-print-title{line-height:1.12!important;}";
+  css+="#printArea.small-label .service-print-item{line-height:1.1!important;min-height:1.65mm;}";
+  css+="#printArea.small-label .qr-bottom{flex-shrink:0!important;}";
+
   css+="#printArea.small-label .service-print-item{display:flex;align-items:center;justify-content:space-between;gap:0.4mm;font-size:4.9pt;line-height:1.2;min-width:0}";
   css+="#printArea.small-label .service-check{width:1.7mm;height:1.7mm;min-width:1.7mm;border:0.2mm solid #111;display:inline-flex;align-items:center;justify-content:center;font-size:4.5pt;font-weight:bold;line-height:1}";
   css+="#printArea.small-label .service-print-note{font-size:4.8pt;line-height:1.2;margin-top:0.2mm}";
